@@ -22,7 +22,7 @@ var core_headpose,
 
 async function poseDetectorEngine(device_name) {
 	core_headpose = new Core();
-	model_headpose = '../models/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001.xml';
+	model_headpose = '/home/joe/Source/models/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001.xml';
 	bin_path_headpose = binPathFromXML(model_headpose);
 	net_headpose = await core_headpose.readNetwork(model_headpose, bin_path_headpose);
 	inputs_info_headpose = net_headpose.getInputsInfo();

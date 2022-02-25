@@ -18,7 +18,7 @@ var core_face,
 
 async function facialLandmarksEngine(device_name) {
 	core_face = new Core();
-	model_face = '../models/landmarks-regression-retail-0009/FP32/landmarks-regression-retail-0009.xml';
+	model_face = '/home/joe/Source/models/landmarks-regression-retail-0009/FP32/landmarks-regression-retail-0009.xml';
 	bin_path_face = binPathFromXML(model_face);
 	net_face = await core_face.readNetwork(model_face, bin_path_face);
 	inputs_info_face = net_face.getInputsInfo();

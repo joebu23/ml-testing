@@ -20,7 +20,7 @@ var core_face,
 
 async function faceDetectorEngine(device_name) {
 	core_face = new Core();
-	model_face = '../models/face-detection-retail-0004/FP32/face-detection-retail-0004.xml';
+	model_face = '/home/joe/Source/models/face-detection-retail-0004/FP32/face-detection-retail-0004.xml';
 	bin_path_face = binPathFromXML(model_face);
 	net_face = await core_face.readNetwork(model_face, bin_path_face);
 	inputs_info_face = net_face.getInputsInfo();

@@ -9,7 +9,6 @@ const uuid = require('uuid');
 const { getRedis, getAllIdentities, saveValue } = require('../common/redis.js');
 
 const similarity = require('compute-cosine-similarity');
-const res = require('express/lib/response');
 
 var core_identity,
     model_identity,
@@ -31,7 +30,7 @@ async function identificationEngine(device_name) {
   await getRedis();
   
 	core_identity = new Core();
-	model_identity = '../models/face-reidentification-retail-0095/FP32/face-reidentification-retail-0095.xml';
+	model_identity = '/home/joe/Source/models/face-reidentification-retail-0095/FP32/face-reidentification-retail-0095.xml';
 	bin_path_identity = binPathFromXML(model_identity);
 	net_identity = await core_identity.readNetwork(model_identity, bin_path_identity);
 	inputs_info_identity = net_identity.getInputsInfo();
