@@ -1,5 +1,5 @@
 const { Core } = require('inference-engine-node');
-
+const { addFoundFace } = require('../common/messenger.js');
 const jimp = require('jimp');
 const fs = require('fs').promises;
 const { performance } = require('perf_hooks');
@@ -37,6 +37,7 @@ async function faceDetectorEngine(device_name) {
 
 async function faceDetector(img) {
 
+
     var results = [];
 
     var resultsObj = {}
@@ -45,7 +46,7 @@ async function faceDetector(img) {
 
     var dims;
 
-    const image_path = Buffer.from(img,'base64');;
+    const image_path = Buffer.from(img,'base64');
 
     const input_h_face = input_dims_face[2];
     const input_w_face = input_dims_face[3];
@@ -124,6 +125,7 @@ async function faceDetector(img) {
   }
 
 	var combined = { results: resultsArr, img: image };
+  addFoundFace(combined);
   return combined;
 }
 

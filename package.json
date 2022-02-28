@@ -9,6 +9,7 @@
   "author": "joe@dig.solutions",
   "license": "",
   "dependencies": {
+    "bull": "^4.6.2",
     "command-line-args": "^5.1.1",
     "command-line-usage": "^6.1.0",
     "compute-cosine-similarity": "^1.0.0",
