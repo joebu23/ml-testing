@@ -49,6 +49,7 @@ async function getFacialIdentification(img) {
   var resultsObj = {
     vect: identities
   };
+
   const image = img.img;
   const agImage = await jimp.read({ data: Buffer.from(image.bitmap.data.data), width: image.bitmap.width, height: image.bitmap.height });
 
@@ -104,15 +105,17 @@ async function getFacialIdentification(img) {
   return returnResults;
 }
 
-const bull = require('bull');
-const queue = new bull("found_faces", 'redis://192.168.86.24');
+module.exports = { getFacialIdentification, identificationEngine };
 
-queue.process(async (job, done) => {
-  await identificationEngine('CPU');
-  console.log(job);
-  if (job.data) {
-    const results = await getFacialIdentification(job.data.face);
-    console.log(results);
-  }
-  done();
-});
+// const bull = require('bull');
+// const queue = new bull("found_faces", 'redis://192.168.86.24');
+
+// queue.process(async (job, done) => {
+//   await identificationEngine('CPU');
+//   console.log(job);
+//   if (job.data) {
+//     const results = await getFacialIdentification(job.data.face);
+//     console.log(results);
+//   }
+//   done();
+// });
