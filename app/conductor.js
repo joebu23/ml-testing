@@ -1,6 +1,9 @@
-'use strict'
+// 'use strict'
 // takes image and begins process of re-identification
 // and keeps track of interaction time and finally saving data as needed
+
+
+
 import { createServer } from "http";
 import { Server } from "socket.io";
 import express from "express";
@@ -9,7 +12,15 @@ app.use(express.static('./public'))
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
-// const { faceDetector, faceDetectorEngine } = require('./inference/faceDetector.js');
+
+// const { createServer } = require("http");
+// const { Server } = require("socket.io");
+// const express = require("express");
+// const app = express();
+// app.use(express.static('./public'))
+// const httpServer = createServer(app);
+// const io = new Server(httpServer);
+
 // const { poseDetector, poseDetectorEngine } = require('./inference/poseDetector.js');
 // const { getFacialLandmarks, facialLandmarksEngine } = require('./inference/faceLandmarks.js');
 // const { getFacialIdentification, identificationEngine } = require('./inference/faceIdentification.js');
@@ -18,6 +29,7 @@ const io = new Server(httpServer);
 // const foundFacesQueue = new bull("found_faces", 'redis://192.168.86.24');
 // const identifiedFacesQueue = new bull("identified_faces", 'redis://192.168.86.24');
 
+// const { faceDetector, faceDetectorEngine } = require('./inference/faceDetector.js');
 import FaceDetector from './inference/faceDetector.js';
 
 // foundFacesQueue.process(async (job, done) => {
@@ -32,7 +44,7 @@ import FaceDetector from './inference/faceDetector.js';
 
 // const jimp = require('jimp');
 
-// const device = "CPU";
+const device = "CPU";
 
 // const faces = [];
 
@@ -46,7 +58,11 @@ async function main(image) {
   
   var test = await faceDetector.infer(image);
   console.log('******************************');
-  console.log(test);
+  
+
+  // var test = await faceDetector(image);
+  // console.log(test);
+  // console.log(test);
   // faceDetector detects faces and kicks off the inferences if
   // await faceDetector(image);
 

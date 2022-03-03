@@ -1,8 +1,4 @@
-
-class Common {
-  constructor() {}
-
-showInputOutputInfo(info) {
+function showInputOutputInfo(info) {
   console.log(`  name: ${info.name()}`);
   console.log(`  precision: ${info.getPrecision()}`);
   console.log(`  layout: ${info.getLayout()}`);
@@ -31,37 +27,35 @@ showInputOutputInfo(info) {
 //   console.log('\x1b[1m' + msg + '\x1b[0m');
 // }
 
-warning(msg) {
+function warning(msg) {
   console.log('\x1b[33m' + msg + '\x1b[0m');
 }
 
-showAvailableDevices(core) {
+function showAvailableDevices(core) {
   const devices = core.getAvailableDevices();
   console.log(`Available target devices: ${devices.join(' ')}`);
 }
 
+const xmlExtensionPattern = /\.xml$/g
 
-binPathFromXML(xmlPath) {
-  var xmlExtensionPattern = /\.xml$/g;
+function binPathFromXML(xmlPath) {
   return xmlPath.replace(xmlExtensionPattern, '.bin');
 }
 
 // function labelsPathFromXML(xmlPath) {
 //   return xmlPath.replace(xmlExtensionPattern, '.labels');
 // }
-}
 
-export default Common;
-// module.exports = {
-//   binPathFromXML,
-//   // classification,
-//   // highlight,
-//   // labelsPathFromXML,
-//   // objectDetection,
-//   showAvailableDevices,
-//   // showBreakLine,
-//   showInputOutputInfo,
-//   // showVersion,
-//   // showPluginVersions,
-//   warning
-// };
+module.exports = {
+  binPathFromXML,
+  // classification,
+  // highlight,
+  // labelsPathFromXML,
+  // objectDetection,
+  showAvailableDevices,
+  // showBreakLine,
+  showInputOutputInfo,
+  // showVersion,
+  // showPluginVersions,
+  warning
+};

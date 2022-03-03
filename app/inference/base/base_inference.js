@@ -91,7 +91,7 @@ class BaseInference {
     const output_blob = infer_req.getBlob(output_info.name());
     const output_data = new Float32Array(output_blob.rmap());
     
-    return output_data;
+    return { data: output_data, img: image};
     // const results =
     //     postProcessing.topClassificationResults(output_data, labelsArray, 2);
     // output_blob.unmap();
