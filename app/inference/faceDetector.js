@@ -21,48 +21,15 @@ class FaceDetector extends BaseInference {
     var dims;
     var holdImg;
 
-    // old image calcs
     const image_path = Buffer.from(img,'base64');
 
-    // const input_h_face = input_dims_face[2];
-    // const input_w_face = input_dims_face[3];
+    var inferenceResult = await super.runInference(image_path, this.labels);
 
-    // let infer_req_face;
-    // infer_req_face = exec_net_face.createInferRequest();
-    // const input_blob_face = infer_req_face.getBlob(input_info_face.name());
-    // const input_data_face = new Uint8Array(input_blob_face.wmap());
-
-    // var agImage = await jimp.read(image_path).then(image => {
-    //   if(image.bitmap.height !== input_h_face && image.bitmap.width !== input_w_face) {
-    //     image.background(0xFFFFFFFF);
-    //     image.contain(image.bitmap.width, image.bitmap.width);
-    //     image.resize(input_w_face, input_h_face, jimp.RESIZE_BILINEAR);
-    //   }
-
-    //   image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, hdx) {
-    //     let h = Math.floor(hdx / 4) * 3;
-    //     input_data_face[h + 2] = image.bitmap.data[hdx + 0];  // R
-    //     input_data_face[h + 1] = image.bitmap.data[hdx + 1];  // G
-    //     input_data_face[h + 0] = image.bitmap.data[hdx + 2];  // B
-    //   });
-      
-    //   return image
-    // }).catch(err => {
-    //   console.error(err);
-    // });
-
-    var image = await jimp.read(image_path).then(image2 => {
-      image2.contain(1000,1000);
-      image2.write('./outputs/detector-input.jpg');
-      return image2
-    }).catch(err => {
-      console.error(err);
-    });
-
-    var inferenceResult = await super.runInference(image, this.labels);
-    console.log(inferenceResult);
-    for (var i = 0, len = inferenceResult.length; i < len; i += 7) {
-      if(inferenceResult[i+2] > 0.8 && ((inferenceResult[i+5] * image.bitmap.width) - (inferenceResult[i+3] * image.bitmap.width)) >= 30) {
+    inferenceResult.img.write('./outputs/test2.jpg');
+    console.log(inferenceResult.data);
+    var testImage = new jimp({ data:inferenceResult.img.bitmap.data, width: inferenceResult.img.bitmap.width, height: inferenceResult.img.bitmap.height});
+    for (var i = 0, len = inferenceResult.data.length; i < len; i += 7) {
+      if(inferenceResult.data[i+2] > 0.8 && ((inferenceResult.data[i+5] * testImage.bitmap.width) - (inferenceResult.data[i+3] * testImage.bitmap.width)) >= 30) {
         results.push(inferenceResult.slice(i, i + 7));
       }
     }

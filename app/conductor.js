@@ -50,11 +50,12 @@ const device = "CPU";
 
 let processing = false;
 
+let faceDetector;
 
 
 async function main(image) {
   processing = true;
-  const faceDetector = new FaceDetector('CPU', '/home/joe/Source/models/face-detection-retail-0004/FP32/face-detection-retail-0004.xml');
+  
   
   var test = await faceDetector.infer(image);
   console.log('******************************');
@@ -82,7 +83,9 @@ io.on('connection', (socket) => {
 let initialized = false;
 
 (async () => {
+    faceDetector = new FaceDetector('CPU', '/home/joe/Source/models/face-detection-retail-0004/FP32/face-detection-retail-0004.xml');
     // await faceDetectorEngine(device);
+    
     // await poseDetectorEngine(device);
     // await facialLandmarksEngine(device);
     // await identificationEngine(device);

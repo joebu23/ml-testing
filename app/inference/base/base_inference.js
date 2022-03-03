@@ -53,19 +53,24 @@ class BaseInference {
     preProcessInfo.setVariant('mean_value');
   
     const output_info = outputs_info[0];
-  
-    const image_path = Buffer.from(imageData,'base64');
-    const image = await jimp.read(image_path);
-  
+    
     const input_dims = input_info.getDims();
     const input_height = input_dims[2];
     const input_width = input_dims[3];
-    if (image.bitmap.height !== input_height ||
-        image.bitmap.width !== input_width)
-    {
-      image.resize(input_width, input_height, jimp.RESIZE_BILINEAR);
-    }
-  
+    
+    const image_path = Buffer.from(imageData,'base64');
+    const image = await jimp.read(image_path).then((image2) => {
+
+      if (image2.bitmap.height !== input_height || image2.bitmap.width !== input_width)
+      {
+        image2.background(0xFFFFFFFF);
+        image2.contain(image2.bitmap.width, image2.bitmap.height);
+        image2.resize(input_width, input_height, jimp.RESIZE_BILINEAR);
+      }
+
+      return image2;
+    });
+
     let infer_req;
   
     for (let i = 0; i < iterations; i++) {
