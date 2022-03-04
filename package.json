@@ -6,7 +6,6 @@
   "scripts": {
     "main": "node engine.js"
   },
-  "type": "module",
   "author": "joe@dig.solutions",
   "license": "",
   "dependencies": {
