@@ -1,9 +1,8 @@
-const { Core, getVersion } = require('inference-engine-node');
-
-const jimp = require('jimp');
-const fs = require('fs').promises;
+const { Core } = require('inference-engine-node');
 const { performance } = require('perf_hooks');
 const { binPathFromXML } = require('../common/index.js');
+
+const jimp = require('jimp');
 
 var results;
 
@@ -20,35 +19,36 @@ var core_headpose,
   exec_net_headpose,
   input_dims_headpose;
 
-async function poseDetectorEngine(device_name) {
-	core_headpose = new Core();
-	model_headpose = '/home/joe/Source/models/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001.xml';
-	bin_path_headpose = binPathFromXML(model_headpose);
-	net_headpose = await core_headpose.readNetwork(model_headpose, bin_path_headpose);
-	inputs_info_headpose = net_headpose.getInputsInfo();
-	outputs_info_headpose = net_headpose.getOutputsInfo();
-	input_info_headpose = inputs_info_headpose[0];
-    output_info_yaw = outputs_info_headpose[0];
-    output_info_pitch = outputs_info_headpose[1];
-    output_info_roll = outputs_info_headpose[2];	input_info_headpose.setLayout('nhwc');
-	input_info_headpose.setPrecision('u8');
-	exec_net_headpose = await core_headpose.loadNetwork(net_headpose, device_name);
-	input_dims_headpose = input_info_headpose.getDims();
+async function poseDetectorEngine(device_name, model) {
+  core_headpose = new Core();
+  model_headpose = model;
+  bin_path_headpose = binPathFromXML(model_headpose);
+  net_headpose = await core_headpose.readNetwork(model_headpose, bin_path_headpose);
+  inputs_info_headpose = net_headpose.getInputsInfo();
+  outputs_info_headpose = net_headpose.getOutputsInfo();
+  // console.log(outputs_info_headpose[0].name());
+  input_info_headpose = inputs_info_headpose[0];
+  output_info_yaw = outputs_info_headpose[2];
+  output_info_pitch = outputs_info_headpose[0];
+  output_info_roll = outputs_info_headpose[1];
+  input_info_headpose.setLayout('nhwc');
+  input_info_headpose.setPrecision('u8');
+  exec_net_headpose = await core_headpose.loadNetwork(net_headpose, device_name);
+  input_dims_headpose = input_info_headpose.getDims();
 }
 
-async function poseDetector(img) {
+async function detectPose(img) {
 
-    const image = img.img;
-    const input_h_headpose = input_dims_headpose[2];
-    const input_w_headpose = input_dims_headpose[3];
+  const image = img.img;
+  const input_h_headpose = input_dims_headpose[2];
+  const input_w_headpose = input_dims_headpose[3];
 
-    // MAKE A COPY OF THE FACE IMAGE TO SCALE
-    let agImage = image;
+  // MAKE A COPY OF THE FACE IMAGE TO SCALE
+  let agImage = image;
 
-    if (agImage.bitmap.height !== input_h_headpose &&
-    agImage.bitmap.width !== input_w_headpose) {
-    agImage.resize(input_w_headpose, input_h_headpose, jimp.RESIZE_BILINEAR);
-    }
+  if (agImage.bitmap.height !== input_h_headpose && agImage.bitmap.width !== input_w_headpose) {
+    agImage.resize(input_w_headpose, input_h_headpose, "bilinearInterpolation");
+  }
 
   // START EMOTIONAL ESTIMATION
   let infer_req_headpose;
@@ -87,7 +87,7 @@ async function poseDetector(img) {
     roll: output_data_roll[0]
   }
 
-    return results;
+  return results;
 }
 
-module.exports = { poseDetector, poseDetectorEngine };
+module.exports = { detectPose, poseDetectorEngine };

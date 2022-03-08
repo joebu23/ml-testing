@@ -2,13 +2,6 @@ const { Core } = require('inference-engine-node');
 const { binPathFromXML } = require('../common/index.js');
 
 const jimp = require('jimp');
-// var cv = require('opencv4nodejs');
-
-// const xmlExtensionPattern = /\.xml$/g
-
-// function binPathFromXML(xmlPath) {
-//   return xmlPath.replace(xmlExtensionPattern, '.bin');
-// }
 
 var core_face,
     model_face,
