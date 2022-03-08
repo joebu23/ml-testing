@@ -232,30 +232,6 @@ async function main() {
   console.log(`Start to read image from ${image_path}.`);
   const image = await jimp.read(image_path);
 
-
-
-
-  // let faces = [];
-  // fs.readFile(image_path).then(async (file) => {
-
-  //   const faceNum = await faceD(file);
-  //   if (faceNum.results.length > 0) {
-  //     console.log('faces found');
-  //     for (var i=0; i < faceNum.results.length; i++) {
-  //       var pose = await headposeR(faceNum.results[i]);
-  //       console.log('***** pose *******');
-  //       console.log(pose);
-
-
-  //     }
-  //   }
-  // });
-
-
-
-
-
-
   console.log(`Succeeded.`);
 
   const input_dims = input_info.getDims();

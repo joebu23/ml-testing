@@ -25,9 +25,9 @@ var core_identity,
 var identities = [];
 
 
-async function identificationEngine(device_name) {
+async function identificationEngine(device_name, model) {
 	core_identity = new Core();
-	model_identity = '/home/joe/Source/models/face-reidentification-retail-0095/FP32/face-reidentification-retail-0095.xml';
+	model_identity = model;
 	bin_path_identity = binPathFromXML(model_identity);
 	net_identity = await core_identity.readNetwork(model_identity, bin_path_identity);
 	inputs_info_identity = net_identity.getInputsInfo();
@@ -43,28 +43,36 @@ async function identificationEngine(device_name) {
 }
 
 
-async function getFacialIdentification(img) {
+async function getFacialIdentification(img, pitch, currentPeople) {
+
   var results = [];
 
   var resultsObj = {
     vect: identities
   };
 
-  const image = img.img;
-  const agImage = await jimp.read({ data: Buffer.from(image.bitmap.data.data), width: image.bitmap.width, height: image.bitmap.height });
+  const image = img;
 
   const input_dims_identity = input_info_identity.getDims();
   const input_h_identity = input_dims_identity[2];
   const input_w_identity = input_dims_identity[3];
 
-  if (agImage.bitmap.height !== input_h_identity &&
-    agImage.bitmap.width !== input_w_identity) {
-    agImage.contain(input_w_identity, input_h_identity);
+  if (image.bitmap.height !== input_h_identity && image.bitmap.width !== input_w_identity) {
+    image.contain(input_w_identity, input_h_identity);
+    image.rotate(pitch);
   }
 
   let infer_req_identity;
   infer_req_identity = exec_net_identity.createInferRequest();
   const input_blob_identity = infer_req_identity.getBlob(input_info_identity.name());
+  const input_data_identity = new Uint8Array(input_blob_identity.wmap());
+
+  image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, hdx) {
+    let h = Math.floor(hdx / 4) * 3;
+    input_data_identity[h + 2] = image.bitmap.data[hdx + 0];  // R
+    input_data_identity[h + 1] = image.bitmap.data[hdx + 1];  // G
+    input_data_identity[h + 0] = image.bitmap.data[hdx + 2];  // B
+  });
 
   const preProcessInfo = input_info_identity.getPreProcess();
   preProcessInfo.init(3);
@@ -80,42 +88,41 @@ async function getFacialIdentification(img) {
   let returnResults = {
     identified: false,
     confidence: 0,
-    image: agImage
+    image: image
   };
 
+  console.log('face count: ' + currentPeople.length);
   results = Array.from(output_data_identity);
-  if (identities.length > 0) {
-    console.log('face count: ' + identities.length)
-    for (var i = 0; i < identities.length; i++) {
-      const newArray = Array.from(identities[i]); //.split(',');
+  if (currentPeople.length > 0) {
+    console.log('face count: ' + currentPeople.length);
+    let matchValue = 0;
+    let matchIndex = null;
+
+    for (var i = 0; i < currentPeople.length; i++) {
+      const newArray = Array.from(currentPeople[i].facialRecMatrix); //.split(',');
 
       var simout = parseFloat(similarity( results, newArray ));
-      if (simout > 0.6) {
-        returnResults.identified = true;
-        returnResults.confidence = simout;
-      } else {
-        identities.push(results);
-        returnResults.confidence = simout;
+      if (simout > matchValue) {
+        matchValue = simout;
+        matchIndex = i;
       }
     }
+
+    if (matchValue > 0.6) {
+      returnResults.identified = true;
+      returnResults.confidence = matchValue;
+      returnResults.index = matchIndex;
+    } else {
+      returnResults.identified = false;
+      returnResults.confidence = matchValue;
+      returnResults.newFaceData = results;
+    }
   } else {
-    identities.push(results);
+    returnResults.identified = false;
+    returnResults.newFaceData = results;
   }
 
   return returnResults;
 }
 
 module.exports = { getFacialIdentification, identificationEngine };
-
-// const bull = require('bull');
-// const queue = new bull("found_faces", 'redis://192.168.86.24');
-
-// queue.process(async (job, done) => {
-//   await identificationEngine('CPU');
-//   console.log(job);
-//   if (job.data) {
-//     const results = await getFacialIdentification(job.data.face);
-//     console.log(results);
-//   }
-//   done();
-// });

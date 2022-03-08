@@ -39,12 +39,11 @@ async function poseDetectorEngine(device_name, model) {
 
 async function detectPose(img) {
 
-  const image = img.img;
   const input_h_headpose = input_dims_headpose[2];
   const input_w_headpose = input_dims_headpose[3];
 
   // MAKE A COPY OF THE FACE IMAGE TO SCALE
-  let agImage = image;
+  let agImage = img;
 
   if (agImage.bitmap.height !== input_h_headpose && agImage.bitmap.width !== input_w_headpose) {
     agImage.resize(input_w_headpose, input_h_headpose, "bilinearInterpolation");

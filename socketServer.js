@@ -39,4 +39,12 @@ io.on('connect', function(socket) {
 
         socket.broadcast.emit('faceDetection', data);
     });
+
+    socket.on('face', function(data) {
+      socket.broadcast.emit('face', data);
+    });
+});
+
+io.on('disconnect', function(socket) {
+  console.log('client disconnected');
 });
