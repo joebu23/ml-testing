@@ -40,7 +40,7 @@ const csvWriter = createCsvWriter({
     {id: 'ageresult', title: 'Age Label'},
     {id: 'genderconfidence', title: 'Gender'},
     {id: 'genderresult', title: 'Gender Label'},
-    {id: 'faceMatch', title: 'Face Match'}
+    {id: 'facialRec', title: 'Face Match'}
   ]
 });
 
@@ -94,7 +94,7 @@ async function main(image) {
     currentPerson.genderconfidence = genderResult[0].prob;
     currentPerson.genderresult= genderResult[0].label;
     currentPerson.facialRec = facialRec.confidence;
-    
+
     var ageResult = await getInference(device,
       jimpImage,
       '/home/joe/Source/models/age_net/age_net.xml',
@@ -113,8 +113,16 @@ async function main(image) {
     allCurrentPeople.push(currentPerson);
   }
   
-  
-  jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
+  var imagePath = `./outputs/identity-${currentPerson.id}.jpg`;
+  fs.access(imagePath, fs.F_OK, (err) => {
+    if (err) {
+      // console.error(err)
+      jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
+      return
+    }
+    
+    //file exists
+  });
   
   
 
