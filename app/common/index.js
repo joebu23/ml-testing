@@ -42,15 +42,15 @@ function binPathFromXML(xmlPath) {
   return xmlPath.replace(xmlExtensionPattern, '.bin');
 }
 
-// function labelsPathFromXML(xmlPath) {
-//   return xmlPath.replace(xmlExtensionPattern, '.labels');
-// }
+function labelsPathFromXML(xmlPath) {
+  return xmlPath.replace(xmlExtensionPattern, '.labels');
+}
 
 module.exports = {
   binPathFromXML,
   // classification,
   // highlight,
-  // labelsPathFromXML,
+  labelsPathFromXML,
   // objectDetection,
   showAvailableDevices,
   // showBreakLine,

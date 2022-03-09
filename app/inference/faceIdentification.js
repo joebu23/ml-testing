@@ -91,10 +91,8 @@ async function getFacialIdentification(img, pitch, currentPeople) {
     image: image
   };
 
-  console.log('face count: ' + currentPeople.length);
   results = Array.from(output_data_identity);
   if (currentPeople.length > 0) {
-    console.log('face count: ' + currentPeople.length);
     let matchValue = 0;
     let matchIndex = null;
 
@@ -108,7 +106,7 @@ async function getFacialIdentification(img, pitch, currentPeople) {
       }
     }
 
-    if (matchValue > 0.6) {
+    if (matchValue > 0.7) {
       returnResults.identified = true;
       returnResults.confidence = matchValue;
       returnResults.index = matchIndex;
