@@ -145,16 +145,12 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
       returnResults.confidence = matchValue;
       returnResults.newFaceData = results;
     }
-
-    return returnResults;
   } else {
-    
-
     returnResults.identified = false;
     returnResults.newFaceData = results;
-    return returnResults;
   }
-
+  
+  return returnResults;
 
 }
 
