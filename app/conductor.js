@@ -49,12 +49,13 @@ async function main(image) {
   processing = true;
 
   var jimpImage = await jimp.read(image.img.bitmap).then((img) => {
+    img.write('./outputs/jimpImage.jpg');
     return img;
   });
   
   var pose = await detectPose(jimpImage);
   var landmarks = await getFacialLandmarks(jimpImage);
-  // console.log(landmarks);
+
   // array of identified people matrices
   // model of items in allCurrentPeople
   // {
@@ -76,8 +77,12 @@ async function main(image) {
   
   // try to identify the face to see if it is a new or old user
   var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
+  console.log(facialRec);
+
+
+
+  
   currentPerson.facialRec = facialRec;
-  // console.log(facialRec);
   if (facialRec.identified) {
     currentPerson = allCurrentPeople[facialRec.index];
   } else {
@@ -108,11 +113,30 @@ async function main(image) {
     currentPerson.ageresult = ageResult[0].label;
 
     currentPerson.pose = pose;
+
     currentPerson.landmarks = landmarks;
+
     currentPerson.addTime = new Date();
 
-    allCurrentPeople.push(currentPerson);
-
+    // need to check that there are discernible landmarks, if not ditch that person since re-identification is not great
+    if (currentPerson.landmarks.leftEye.x > 1 || currentPerson.landmarks.leftEye.x < 0.0000000005 ||
+        currentPerson.landmarks.leftEye.y > 1 || currentPerson.landmarks.leftEye.y < 0.0000000005 ||
+        currentPerson.landmarks.rightEye.x > 1 || currentPerson.landmarks.rightEye.x < 0.0000000005 ||
+        currentPerson.landmarks.rightEye.y > 1 || currentPerson.landmarks.rightEye.y < 0.0000000005 ||
+        currentPerson.landmarks.tipOfNose.x > 1 || currentPerson.landmarks.tipOfNose.x < 0.0000000005 ||
+        currentPerson.landmarks.tipOfNose.y > 1 || currentPerson.landmarks.tipOfNose.y < 0.0000000005 ||
+        currentPerson.landmarks.leftLip.x > 1 || currentPerson.landmarks.leftLip.x < 0.0000000005 ||
+        currentPerson.landmarks.leftLip.y > 1 || currentPerson.landmarks.leftLip.y < 0.0000000005 ||
+        currentPerson.landmarks.rightLip.x > 1 || currentPerson.landmarks.rightLip.x < 0.0000000005 ||
+        currentPerson.landmarks.rightLip.y > 1 || currentPerson.landmarks.rightLip.y < 0.0000000005
+      ) {
+        console.log('person was missing features so I skipped them');
+        console.log(currentPerson);
+      } else {
+        console.log('got one');
+        allCurrentPeople.push(currentPerson);
+      }
+      
   }
   
   var imagePath = `./outputs/identity-${currentPerson.id}.jpg`;

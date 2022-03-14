@@ -54,7 +54,8 @@ async function identificationEngine(device_name, model) {
 async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) {
   var results = [];
 
-  console.log(currentPeople.length);
+  // console.log(currentPeople);
+  // console.log(srcLandmarks);
   
   var resultsObj = {
     vect: identities
@@ -63,65 +64,67 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
   const baseImage = img;
   var image;
 
-  const controlPoints = [
-    srcLandmarks[0], srcLandmarks[1], 0.31556875000000000, 0.4615741071428571,
-    srcLandmarks[2], srcLandmarks[3], 0.68262291666666670, 0.4615741071428571,
-    srcLandmarks[4], srcLandmarks[5], 0.50026249999999990, 0.6405053571428571,
-    srcLandmarks[6], srcLandmarks[7], 0.34947187500000004, 0.8246919642857142,
-    srcLandmarks[8], srcLandmarks[9], 0.65343645833333330, 0.8246919642857142,
-  ];
-
-  var image = await distort(baseImage, Distortion.AFFINE, controlPoints)
-    .then(async result => {
-      await result.image.image.write('../outputs/testest.jpg');
-      return result.image.image;
-  });
-
-  const input_dims_identity = input_info_identity.getDims();
-  const input_h_identity = input_dims_identity[2];
-  const input_w_identity = input_dims_identity[3];
-
-  if (image.bitmap.height !== input_h_identity && image.bitmap.width !== input_w_identity) {
-    image.contain(input_w_identity, input_h_identity);
-    image.rotate(pitch);
-  }
-
-  let infer_req_identity;
-  infer_req_identity = exec_net_identity.createInferRequest();
-  const input_blob_identity = infer_req_identity.getBlob(input_info_identity.name());
-  const input_data_identity = new Uint8Array(input_blob_identity.wmap());
-
-  image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, hdx) {
-    let h = Math.floor(hdx / 4) * 3;
-    input_data_identity[h + 2] = image.bitmap.data[hdx + 0];  // R
-    input_data_identity[h + 1] = image.bitmap.data[hdx + 1];  // G
-    input_data_identity[h + 0] = image.bitmap.data[hdx + 2];  // B
-  });
-
-  const preProcessInfo = input_info_identity.getPreProcess();
-  preProcessInfo.init(3);
-  preProcessInfo.setVariant('mean_value');
-
-  input_blob_identity.unmap();
-
-  infer_req_identity.infer();
-
-  const output_blob_identity = infer_req_identity.getBlob(output_info_identity.name());
-  const output_data_identity = new Float32Array(output_blob_identity.rmap());
-
   let returnResults = {
     identified: false,
     confidence: 0,
-    image: image
+    image: image,
+    index: 0,
+    newFaceData: null
   };
-
-  results = Array.from(output_data_identity);
 
   if (currentPeople.length > 0) {
     let matchValue = 0;
     let matchIndex = null;
 
     for (var i = 0; i < currentPeople.length; i++) {
+      const controlPoints = [
+        srcLandmarks[0], srcLandmarks[1], currentPeople[i].landmarks.leftEye.x, currentPeople[i].landmarks.leftEye.y,
+        srcLandmarks[2], srcLandmarks[3], currentPeople[i].landmarks.rightEye.x, currentPeople[i].landmarks.rightEye.y,
+        srcLandmarks[4], srcLandmarks[5], currentPeople[i].landmarks.tipOfNose.x, currentPeople[i].landmarks.tipOfNose.y,
+        srcLandmarks[6], srcLandmarks[7], currentPeople[i].landmarks.leftLip.x, currentPeople[i].landmarks.leftLip.y,
+        srcLandmarks[8], srcLandmarks[9], currentPeople[i].landmarks.rightLip.x, currentPeople[i].landmarks.rightLip.y
+      ];
+    
+      var image = await distort(baseImage, Distortion.AFFINE, controlPoints)
+        .then(async result => {
+          await result.image.image.write('../outputs/testest.jpg');
+          return result.image.image;
+      });
+    
+      const input_dims_identity = input_info_identity.getDims();
+      const input_h_identity = input_dims_identity[2];
+      const input_w_identity = input_dims_identity[3];
+    
+      if (image.bitmap.height !== input_h_identity && image.bitmap.width !== input_w_identity) {
+        image.contain(input_w_identity, input_h_identity);
+        image.rotate(pitch);
+      }
+    
+      let infer_req_identity;
+      infer_req_identity = exec_net_identity.createInferRequest();
+      const input_blob_identity = infer_req_identity.getBlob(input_info_identity.name());
+      const input_data_identity = new Uint8Array(input_blob_identity.wmap());
+    
+      image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, hdx) {
+        let h = Math.floor(hdx / 4) * 3;
+        input_data_identity[h + 2] = image.bitmap.data[hdx + 0];  // R
+        input_data_identity[h + 1] = image.bitmap.data[hdx + 1];  // G
+        input_data_identity[h + 0] = image.bitmap.data[hdx + 2];  // B
+      });
+    
+      const preProcessInfo = input_info_identity.getPreProcess();
+      preProcessInfo.init(3);
+      preProcessInfo.setVariant('mean_value');
+    
+      input_blob_identity.unmap();
+    
+      infer_req_identity.infer();
+    
+      const output_blob_identity = infer_req_identity.getBlob(output_info_identity.name());
+      const output_data_identity = new Float32Array(output_blob_identity.rmap());
+    
+      results = Array.from(output_data_identity);
+
       const newArray = Array.from(currentPeople[i].facialRecMatrix); //.split(',');
 
       var simout = parseFloat(similarity( results, newArray ));
@@ -136,17 +139,74 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
       returnResults.identified = true;
       returnResults.confidence = matchValue;
       returnResults.index = matchIndex;
+      returnResults.newFaceData = results;
     } else {
       returnResults.identified = false;
       returnResults.confidence = matchValue;
       returnResults.newFaceData = results;
     }
+
+    return returnResults;
   } else {
+    const controlPoints = [
+      srcLandmarks[0], srcLandmarks[1], 0.31556875000000000, 0.4615741071428571,
+      srcLandmarks[2], srcLandmarks[3], 0.68262291666666670, 0.4615741071428571,
+      srcLandmarks[4], srcLandmarks[5], 0.50026249999999990, 0.6405053571428571,
+      srcLandmarks[6], srcLandmarks[7], 0.34947187500000004, 0.8246919642857142,
+      srcLandmarks[8], srcLandmarks[9], 0.65343645833333330, 0.8246919642857142,
+    ];
+  
+    var image = await distort(baseImage, Distortion.AFFINE, controlPoints)
+      .then(async result => {
+        await result.image.image.write('../outputs/testest.jpg');
+        return result.image.image;
+    });
+  
+    const input_dims_identity = input_info_identity.getDims();
+    const input_h_identity = input_dims_identity[2];
+    const input_w_identity = input_dims_identity[3];
+  
+    if (image.bitmap.height !== input_h_identity && image.bitmap.width !== input_w_identity) {
+      image.contain(input_w_identity, input_h_identity);
+      image.rotate(pitch);
+    }
+  
+    let infer_req_identity;
+    infer_req_identity = exec_net_identity.createInferRequest();
+    const input_blob_identity = infer_req_identity.getBlob(input_info_identity.name());
+    const input_data_identity = new Uint8Array(input_blob_identity.wmap());
+  
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, hdx) {
+      let h = Math.floor(hdx / 4) * 3;
+      input_data_identity[h + 2] = image.bitmap.data[hdx + 0];  // R
+      input_data_identity[h + 1] = image.bitmap.data[hdx + 1];  // G
+      input_data_identity[h + 0] = image.bitmap.data[hdx + 2];  // B
+    });
+  
+    const preProcessInfo = input_info_identity.getPreProcess();
+    preProcessInfo.init(3);
+    preProcessInfo.setVariant('mean_value');
+  
+    input_blob_identity.unmap();
+  
+    infer_req_identity.infer();
+  
+    const output_blob_identity = infer_req_identity.getBlob(output_info_identity.name());
+    const output_data_identity = new Float32Array(output_blob_identity.rmap());
+  
+    let returnResults = {
+      identified: false,
+      confidence: 0,
+      image: image
+    };
+  
+    results = Array.from(output_data_identity);
+
     returnResults.identified = false;
     returnResults.newFaceData = results;
+    return returnResults;
   }
 
-  return returnResults;
 
 }
 
