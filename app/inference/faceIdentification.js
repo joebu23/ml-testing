@@ -54,7 +54,7 @@ async function identificationEngine(device_name, model) {
 async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) {
   var results = [];
 
-  // console.log(currentPeople);
+  console.log(currentPeople);
   // console.log(srcLandmarks);
   
   var resultsObj = {
@@ -73,6 +73,7 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
   };
 
   if (currentPeople.length > 0) {
+    console.log(currentPeople[0].landmarks.leftEye.x);
     let matchValue = 0;
     let matchIndex = null;
 
