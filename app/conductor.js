@@ -40,7 +40,6 @@ const csvWriter = createCsvWriter({
     {id: 'ageresult', title: 'Age Label'},
     {id: 'genderconfidence', title: 'Gender'},
     {id: 'genderresult', title: 'Gender Label'},
-    {id: 'facialRec', title: 'Face Match'}
   ]
 });
 
@@ -87,17 +86,22 @@ async function main(image) {
     currentPerson.id = uuid.v4();
     currentPerson.facialRecMatrix = facialRec.newFaceData;
 
-    var genderResult = await getInference(device, jimpImage, '/home/joe/Source/models/gender_net/gender_net.xml', ['Male', 'Female'], 2);
+    var genderResult = await getInference(device,
+      jimpImage,
+      '/home/joe/Source/models/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml',
+      1,
+      ['Female', 'Male'],
+      2);
     // console.log(genderResult);
     currentPerson.gender = { result: genderResult[0].label, confidence: genderResult[0].prob };
 
     currentPerson.genderconfidence = genderResult[0].prob;
     currentPerson.genderresult= genderResult[0].label;
-    currentPerson.facialRec = facialRec.confidence;
 
     var ageResult = await getInference(device,
       jimpImage,
       '/home/joe/Source/models/age_net/age_net.xml',
+      0,
       ['0-8', '0-8', '8-18', '18-25', '25-35', '35-45', '45-55', 'Over 55'],
       4);
     // console.log(ageResult);
