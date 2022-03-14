@@ -1,12 +1,20 @@
 const { Core, getVersion } = require('inference-engine-node');
 
-const jimp = require('jimp');
 const fs = require('fs').promises;
 const { performance } = require('perf_hooks');
 const { binPathFromXML } = require('../common/index.js');
 const uuid = require('uuid');
 
 const similarity = require('compute-cosine-similarity');
+
+const { getFacialLandmarks } = require('./faceLandmarks.js');
+// var cv = require('opencv4nodejs');
+const transformation = require('transformation-matrix');
+
+const {distort, Distortion} = require('@alxcube/lens');
+const jimp = require('jimp');
+const {Adapter} = require('@alxcube/lens-jimp');
+const { distanceFromHash } = require('jimp');
 
 
 var core_identity,
@@ -43,15 +51,31 @@ async function identificationEngine(device_name, model) {
 }
 
 
-async function getFacialIdentification(img, pitch, currentPeople) {
-
+async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) {
   var results = [];
 
+  console.log(currentPeople.length);
+  
   var resultsObj = {
     vect: identities
   };
+  
+  const baseImage = img;
+  var image;
 
-  const image = img;
+  const controlPoints = [
+    srcLandmarks[0], srcLandmarks[1], 0.31556875000000000, 0.4615741071428571,
+    srcLandmarks[2], srcLandmarks[3], 0.68262291666666670, 0.4615741071428571,
+    srcLandmarks[4], srcLandmarks[5], 0.50026249999999990, 0.6405053571428571,
+    srcLandmarks[6], srcLandmarks[7], 0.34947187500000004, 0.8246919642857142,
+    srcLandmarks[8], srcLandmarks[9], 0.65343645833333330, 0.8246919642857142,
+  ];
+
+  var image = await distort(baseImage, Distortion.AFFINE, controlPoints)
+    .then(async result => {
+      await result.image.image.write('../outputs/testest.jpg');
+      return result.image.image;
+  });
 
   const input_dims_identity = input_info_identity.getDims();
   const input_h_identity = input_dims_identity[2];
@@ -92,6 +116,7 @@ async function getFacialIdentification(img, pitch, currentPeople) {
   };
 
   results = Array.from(output_data_identity);
+
   if (currentPeople.length > 0) {
     let matchValue = 0;
     let matchIndex = null;
@@ -106,7 +131,8 @@ async function getFacialIdentification(img, pitch, currentPeople) {
       }
     }
 
-    if (matchValue > 0.7) {
+    console.log(matchValue);
+    if (matchValue > 0.74) {
       returnResults.identified = true;
       returnResults.confidence = matchValue;
       returnResults.index = matchIndex;
@@ -121,6 +147,7 @@ async function getFacialIdentification(img, pitch, currentPeople) {
   }
 
   return returnResults;
+
 }
 
 module.exports = { getFacialIdentification, identificationEngine };

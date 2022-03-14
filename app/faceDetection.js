@@ -30,37 +30,7 @@ io.on('faceDetection', async (data) => {
             for (var i = 0; i < faces.results.length; i++) {
                 // emit face for conductor class
                 io.emit('face', { image: true, buffer: faces.results[i] });
-                // is this user active or passive?
-                // using just yaw right now.  Basically if the face is from -20 to 20 degrees it is in the direction of the camera and is therefore active
-                // var pose = await detectPose(faces.results[i]);
-                // if (Math.abs(pose.yaw) <= 20) {
-                //     // active user
-                //     console.log('active user');
-                // } else {
-                //     console.log('inactive user');
-                // }
-
-                // // try to identify the face to see if it is a new or old user
-                // var test = await getFacialIdentification(faces.results[i], pose.pitch);
-                // // console.clear();
-                // if (!test.identified) {
-                //     const image_path = Buffer.from(data.buffer,'base64');
-                //     var image = await jimp.read(image_path).then(image2 => {
-                //         image2.contain(1000,1000);
-                //         image2.write(`../outputs/identity-${uuid.v4()}.jpg`);
-                //         return image2
-                //       }).catch(err => {
-                //         console.error(err);
-                //       });
-                // }
-                // console.log(test);
-                // send each face to be re-identified if possible
-                // var landmarks = await getFacialLandmarks(faces.results[i]);
-                // console.log(landmarks);
             }
-            
-
-            
         }
     }
 });
@@ -70,5 +40,3 @@ let initialized = false;
     await faceEngine(device, '/home/joe/Source/models/face-detection-retail-0004/FP32/face-detection-retail-0004.xml');
     initialized = true;
 })();
-
-

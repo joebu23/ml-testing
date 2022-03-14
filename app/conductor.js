@@ -13,7 +13,7 @@ const fs = require('fs');
 // const { detectFaces, faceEngine } = require('./inference/faceDetector.js');
 
 const { detectPose, poseDetectorEngine } = require('./inference/poseDetector.js');
-const { facialLandmarksEngine } = require('./inference/faceLandmarks.js');
+const { getFacialLandmarks, facialLandmarksEngine } = require('./inference/faceLandmarks.js');
 const { getFacialIdentification, identificationEngine } = require('./inference/faceIdentification.js');
 const { getInference } = require('./inference/genericInference.js');
 
@@ -40,7 +40,8 @@ const csvWriter = createCsvWriter({
     {id: 'ageresult', title: 'Age Label'},
     {id: 'genderconfidence', title: 'Gender'},
     {id: 'genderresult', title: 'Gender Label'},
-    {id: 'facialRec', title: 'Face Match'}
+    {id: 'facialRec', title: 'Face Match'},
+    {id: 'addTime', title: 'Time added'}
   ]
 });
 
@@ -50,11 +51,10 @@ async function main(image) {
   var jimpImage = await jimp.read(image.img.bitmap).then((img) => {
     return img;
   });
- 
-  // is this user active or passive?
-  // using just yaw right now.  Basically if the face is from -20 to 20 degrees it is in the direction of the camera and is therefore active
+  
   var pose = await detectPose(jimpImage);
-
+  var landmarks = await getFacialLandmarks(jimpImage);
+  // console.log(landmarks);
   // array of identified people matrices
   // model of items in allCurrentPeople
   // {
@@ -71,24 +71,25 @@ async function main(image) {
   //   age { result, confidence }
   //   emotion? { result, confidence }
   // }
-
-  let currentPerson = {};
-
-  // try to identify the face to see if it is a new or old user
-  var facialRec = await getFacialIdentification(jimpImage, pose.roll, allCurrentPeople);
   
+  let currentPerson = {};
+  
+  // try to identify the face to see if it is a new or old user
+  var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
+  currentPerson.facialRec = facialRec;
+  // console.log(facialRec);
   if (facialRec.identified) {
     currentPerson = allCurrentPeople[facialRec.index];
-
-    console.log(facialRec.confidence);
-
-    console.log('old person');
   } else {
     currentPerson.id = uuid.v4();
     currentPerson.facialRecMatrix = facialRec.newFaceData;
 
-    var genderResult = await getInference(device, jimpImage, '/home/joe/Source/models/gender_net/gender_net.xml', ['Male', 'Female'], 2);
-    // console.log(genderResult);
+    var genderResult = await getInference(device,
+      jimpImage,
+      '/home/joe/Source/models/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml',
+      1,
+      ['Female', 'Male'],
+      2);
     currentPerson.gender = { result: genderResult[0].label, confidence: genderResult[0].prob };
 
     currentPerson.genderconfidence = genderResult[0].prob;
@@ -98,45 +99,40 @@ async function main(image) {
     var ageResult = await getInference(device,
       jimpImage,
       '/home/joe/Source/models/age_net/age_net.xml',
+      0,
       ['0-8', '0-8', '8-18', '18-25', '25-35', '35-45', '45-55', 'Over 55'],
       4);
-    // console.log(ageResult);
     currentPerson.age = { result: ageResult[0].label, confidence: ageResult[0].prob }
 
     currentPerson.ageconfidence = ageResult[0].prob;
     currentPerson.ageresult = ageResult[0].label;
 
-    console.log('new person');
-    // console.log(currentPerson);
-    
-    
+    currentPerson.pose = pose;
+    currentPerson.landmarks = landmarks;
+    currentPerson.addTime = new Date();
+
     allCurrentPeople.push(currentPerson);
+
   }
   
   var imagePath = `./outputs/identity-${currentPerson.id}.jpg`;
   fs.access(imagePath, fs.F_OK, (err) => {
     if (err) {
-      // console.error(err)
       jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
       return
     }
-    
-    //file exists
+    // file exists
   });
-  
-  
-
 
   processing = false;
 };
 
+// FOR TESTING TO SEE WHAT ALL IS IN THE ALL PEOPLE
 process.on('SIGINT', async function() {
   await csvWriter.writeRecords(allCurrentPeople);
   console.log("Caught interrupt signal");
   process.exit();
 });
-
-
 
 socketPub.on('face', (data) => {
   if(data.image && !processing && initialized) {
@@ -154,26 +150,3 @@ let initialized = false;
 // httpServer.listen(3030);
 console.log("STARTED");
 
-
-
-
-
-
-const data = [
-  {
-    name: 'John',
-    surname: 'Snow',
-    age: 26,
-    gender: 'M'
-  }, {
-    name: 'Clair',
-    surname: 'White',
-    age: 33,
-    gender: 'F',
-  }, {
-    name: 'Fancy',
-    surname: 'Brown',
-    age: 78,
-    gender: 'F'
-  }
-];

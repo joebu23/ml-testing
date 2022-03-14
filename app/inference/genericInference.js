@@ -14,7 +14,7 @@ const {
   labelsPathFromXML
 } = require('../common/index.js');
 
-async function getInference(device, image, model, labels, top) {
+async function getInference(device, image, model, output, labels, top) {
     const core = new Core();
 
 
@@ -47,7 +47,7 @@ async function getInference(device, image, model, labels, top) {
     preProcessInfo.getPreProcessChannel(rgb.b).meanValue = mean[rgb.b];
     preProcessInfo.setVariant('mean_value');
 
-    const output_info = outputs_info[0];
+    const output_info = outputs_info[output];
 
     const input_dims = input_info.getDims();
     const input_height = input_dims[2];

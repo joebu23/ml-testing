@@ -16,9 +16,9 @@ var core_face,
     input_info_face_name,
     output_info_face_name;
 
-async function facialLandmarksEngine(device_name) {
+async function facialLandmarksEngine(device_name, model) {
 	core_face = new Core();
-	model_face = '/home/joe/Source/models/landmarks-regression-retail-0009/FP32/landmarks-regression-retail-0009.xml';
+	model_face = model;
 	bin_path_face = binPathFromXML(model_face);
 	net_face = await core_face.readNetwork(model_face, bin_path_face);
 	inputs_info_face = net_face.getInputsInfo();
@@ -46,7 +46,8 @@ var resultsObj = {
   rightLip: []
 };
 
-    const image = img.img;
+    const image = img;
+    // console.log(image);
 
     const agImage = await jimp.read(image);
 
@@ -85,14 +86,14 @@ var resultsObj = {
 
   results = output_data_face;
 
-  resultsObj.leftEye = [((results[0] * img.dims.w) + img.dims.x), ((results[1] * img.dims.h) + img.dims.y)];
-  resultsObj.rightEye = [((results[2] * img.dims.w) + img.dims.x), ((results[3] * img.dims.h) + img.dims.y)];
-  resultsObj.noseTip = [((results[4] * img.dims.w) + img.dims.x), ((results[5] * img.dims.h) + img.dims.y)]
-  resultsObj.leftLip = [((results[6] * img.dims.w) + img.dims.x), ((results[7] * img.dims.h) + img.dims.y)];
-  resultsObj.rightLip = [((results[8] * img.dims.w) + img.dims.x), ((results[9] * img.dims.h) + img.dims.y)]
+  // resultsObj.leftEye = [((results[0] * img.dims.w) + img.dims.x), ((results[1] * img.dims.h) + img.dims.y)];
+  // resultsObj.rightEye = [((results[2] * img.dims.w) + img.dims.x), ((results[3] * img.dims.h) + img.dims.y)];
+  // resultsObj.noseTip = [((results[4] * img.dims.w) + img.dims.x), ((results[5] * img.dims.h) + img.dims.y)]
+  // resultsObj.leftLip = [((results[6] * img.dims.w) + img.dims.x), ((results[7] * img.dims.h) + img.dims.y)];
+  // resultsObj.rightLip = [((results[8] * img.dims.w) + img.dims.x), ((results[9] * img.dims.h) + img.dims.y)]
 
 
-  return resultsObj;
+  return results;
 }
 
 module.exports = { getFacialLandmarks, facialLandmarksEngine };
