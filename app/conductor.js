@@ -1,26 +1,15 @@
 // takes image and begins process of re-identification
 // and keeps track of interaction time and finally saving data as needed
 
-// const { createServer } = require("http");
-// const { Server } = require("socket.io");
-// const express = require("express");
-// const util = require('util');
 const jimp = require('jimp');
 const uuid = require('uuid');
 const fs = require('fs');
-// const { Core, getVersion } = require('inference-engine-node');
-// const cv = require('opencv4nodejs');
-// const { detectFaces, faceEngine } = require('./inference/faceDetector.js');
 
 const { detectPose, poseDetectorEngine } = require('./inference/poseDetector.js');
 const { facialLandmarksEngine } = require('./inference/faceLandmarks.js');
 const { getFacialIdentification, identificationEngine } = require('./inference/faceIdentification.js');
 const { getInference } = require('./inference/genericInference.js');
 
-// const app = express();
-// app.use(express.static('public'))
-// const httpServer = createServer(app);
-// const io = new Server(httpServer);
 const host = '127.0.0.1'; // process.env.SOCKET_ADDR || '172.17.0.1';
 const sport = process.env.SOCKET_PORT || '3333';
 const socketPub = require('socket.io-client')('ws://' + host + ':' + sport);
