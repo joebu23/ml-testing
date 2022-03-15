@@ -65,13 +65,11 @@ async function main(image) {
 
   // try to identify the face to see if it is a new or old user
   var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
+  console.log(facialRec.confidence);
   
   if (facialRec.identified) {
     currentPerson = allCurrentPeople[facialRec.index];
-
-    console.log(facialRec.confidence);
-
-    console.log('old person');
+    currentPerson.facialRecMatrix = facialRec.newFaceData;
   } else {
     currentPerson.id = uuid.v4();
     currentPerson.facialRecMatrix = facialRec.newFaceData;
@@ -82,9 +80,8 @@ async function main(image) {
       1,
       ['Female', 'Male'],
       2);
-    // console.log(genderResult);
-    currentPerson.gender = { result: genderResult[0].label, confidence: genderResult[0].prob };
 
+    currentPerson.gender = { result: genderResult[0].label, confidence: genderResult[0].prob };
     currentPerson.genderconfidence = genderResult[0].prob;
     currentPerson.genderresult= genderResult[0].label;
 
@@ -94,32 +91,15 @@ async function main(image) {
       0,
       ['0-8', '0-8', '8-18', '18-25', '25-35', '35-45', '45-55', 'Over 55'],
       4);
-    // console.log(ageResult);
-    currentPerson.age = { result: ageResult[0].label, confidence: ageResult[0].prob }
 
+    currentPerson.age = { result: ageResult[0].label, confidence: ageResult[0].prob }
     currentPerson.ageconfidence = ageResult[0].prob;
     currentPerson.ageresult = ageResult[0].label;
-
-    console.log('new person');
-    // console.log(currentPerson);
-    
     
     allCurrentPeople.push(currentPerson);
   }
   
-  var imagePath = `./outputs/identity-${currentPerson.id}.jpg`;
-  fs.access(imagePath, fs.F_OK, (err) => {
-    if (err) {
-      // console.error(err)
-      jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
-      return
-    }
-    
-    //file exists
-  });
-  
-  
-
+  jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
 
   processing = false;
 };
