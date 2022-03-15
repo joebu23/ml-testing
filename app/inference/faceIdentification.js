@@ -54,24 +54,17 @@ async function identificationEngine(device_name, model) {
 async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) {
   var results = [];
 
-  // console.log(currentPeople);
-  // console.log(srcLandmarks);
+  // console.log(img);
   
   var resultsObj = {
     vect: identities
   };
+
   
   const baseImage = img;
+  await baseImage.write('../testtestetsetsetset.jpg');
   var image;
-
-  let returnResults = {
-    identified: false,
-    confidence: 0,
-    image: image,
-    index: 0,
-    newFaceData: null
-  };
-
+  
   const controlPoints = [
     srcLandmarks[0], srcLandmarks[1], 0.31556875000000000, 0.4615741071428571,
     srcLandmarks[2], srcLandmarks[3], 0.68262291666666670, 0.4615741071428571,
@@ -84,11 +77,11 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
     .then(async result => {
       await result.image.image.write('../outputs/testest.jpg');
       return result.image.image;
-  });
-
-  const input_dims_identity = input_info_identity.getDims();
-  const input_h_identity = input_dims_identity[2];
-  const input_w_identity = input_dims_identity[3];
+    });
+    
+    const input_dims_identity = input_info_identity.getDims();
+    const input_h_identity = input_dims_identity[2];
+    const input_w_identity = input_dims_identity[3];
 
   if (image.bitmap.height !== input_h_identity && image.bitmap.width !== input_w_identity) {
     image.contain(input_w_identity, input_h_identity);
@@ -118,6 +111,12 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
   const output_blob_identity = infer_req_identity.getBlob(output_info_identity.name());
   const output_data_identity = new Float32Array(output_blob_identity.rmap());
 
+  let returnResults = {
+    identified: false,
+    confidence: 0,
+    image: image
+  };
+
   results = Array.from(output_data_identity);
 
   if (currentPeople.length > 0) {
@@ -139,7 +138,6 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
       returnResults.identified = true;
       returnResults.confidence = matchValue;
       returnResults.index = matchIndex;
-      returnResults.newFaceData = results;
     } else {
       returnResults.identified = false;
       returnResults.confidence = matchValue;
@@ -149,7 +147,7 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
     returnResults.identified = false;
     returnResults.newFaceData = results;
   }
-  
+
   return returnResults;
 
 }
