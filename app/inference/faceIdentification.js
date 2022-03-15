@@ -5,6 +5,8 @@ const fs = require('fs').promises;
 const { performance } = require('perf_hooks');
 const { binPathFromXML } = require('../common/index.js');
 const uuid = require('uuid');
+const { distort, Distortion } = require('@alxcube/lens');
+const {Adapter} = require('@alxcube/lens-jimp');
 
 const similarity = require('compute-cosine-similarity');
 
@@ -43,7 +45,7 @@ async function identificationEngine(device_name, model) {
 }
 
 
-async function getFacialIdentification(img, pitch, currentPeople) {
+async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) {
 
   var results = [];
 
@@ -51,7 +53,21 @@ async function getFacialIdentification(img, pitch, currentPeople) {
     vect: identities
   };
 
-  const image = img;
+  const baseImage = img;
+
+  const controlPoints = [
+    srcLandmarks.leftEye.x, srcLandmarks.leftEye.y, 0.31556875000000000, 0.4615741071428571,
+    srcLandmarks.rightEye.x, srcLandmarks.rightEye.y, 0.68262291666666670, 0.4615741071428571,
+    srcLandmarks.tipOfNose.x, srcLandmarks.tipOfNose.y, 0.50026249999999990, 0.6405053571428571,
+    srcLandmarks.leftLip.x, srcLandmarks.leftLip.y, 0.34947187500000004, 0.8246919642857142,
+    srcLandmarks.rightLip.x, srcLandmarks.rightLip.y, 0.65343645833333330, 0.8246919642857142,
+  ];
+
+  var image = await distort(baseImage, Distortion.AFFINE, controlPoints)
+    .then(async result => {
+      await result.image.image.write('../outputs/normalized.jpg');
+      return result.image.image;
+    });
 
   const input_dims_identity = input_info_identity.getDims();
   const input_h_identity = input_dims_identity[2];

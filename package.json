@@ -9,6 +9,8 @@
   "author": "joe@dig.solutions",
   "license": "",
   "dependencies": {
+    "@alxcube/lens": "^1.0.0",
+    "@alxcube/lens-jimp": "^2.0.0",
     "bull": "^4.6.2",
     "command-line-args": "^5.1.1",
     "command-line-usage": "^6.1.0",

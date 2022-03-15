@@ -41,12 +41,12 @@ var results = [];
 var resultsObj = {
   leftEye: [],
   rightEye: [],
-  noseTip: [],
+  tipOfNose: [],
   leftLip: [],
   rightLip: []
 };
 
-    const image = img.img;
+    const image = img;
 
     const agImage = await jimp.read(image);
 
@@ -85,12 +85,11 @@ var resultsObj = {
 
   results = output_data_face;
 
-  resultsObj.leftEye = [((results[0] * img.dims.w) + img.dims.x), ((results[1] * img.dims.h) + img.dims.y)];
-  resultsObj.rightEye = [((results[2] * img.dims.w) + img.dims.x), ((results[3] * img.dims.h) + img.dims.y)];
-  resultsObj.noseTip = [((results[4] * img.dims.w) + img.dims.x), ((results[5] * img.dims.h) + img.dims.y)]
-  resultsObj.leftLip = [((results[6] * img.dims.w) + img.dims.x), ((results[7] * img.dims.h) + img.dims.y)];
-  resultsObj.rightLip = [((results[8] * img.dims.w) + img.dims.x), ((results[9] * img.dims.h) + img.dims.y)]
-
+  resultsObj.leftEye = { x: results[0], y: results[1] };
+  resultsObj.rightEye = { x: results[2], y: results[3] };
+  resultsObj.tipOfNose = { x: results[4], y: results[5] };
+  resultsObj.leftLip = { x: results[6], y: results[7] };
+  resultsObj.rightLip = { x: results[8], y: results[9] };
 
   return resultsObj;
 }

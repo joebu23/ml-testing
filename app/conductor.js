@@ -6,7 +6,7 @@ const uuid = require('uuid');
 const fs = require('fs');
 
 const { detectPose, poseDetectorEngine } = require('./inference/poseDetector.js');
-const { facialLandmarksEngine } = require('./inference/faceLandmarks.js');
+const { getFacialLandmarks, facialLandmarksEngine } = require('./inference/faceLandmarks.js');
 const { getFacialIdentification, identificationEngine } = require('./inference/faceIdentification.js');
 const { getInference } = require('./inference/genericInference.js');
 
@@ -42,6 +42,7 @@ async function main(image) {
   // is this user active or passive?
   // using just yaw right now.  Basically if the face is from -20 to 20 degrees it is in the direction of the camera and is therefore active
   var pose = await detectPose(jimpImage);
+  var landmarks = await getFacialLandmarks(jimpImage);
 
   // array of identified people matrices
   // model of items in allCurrentPeople
@@ -63,7 +64,7 @@ async function main(image) {
   let currentPerson = {};
 
   // try to identify the face to see if it is a new or old user
-  var facialRec = await getFacialIdentification(jimpImage, pose.roll, allCurrentPeople);
+  var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
   
   if (facialRec.identified) {
     currentPerson = allCurrentPeople[facialRec.index];
