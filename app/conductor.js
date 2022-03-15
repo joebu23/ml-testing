@@ -32,13 +32,12 @@ async function main(image) {
   var pose = await detectPose(jimpImage);
   var landmarks = await getFacialLandmarks(jimpImage);
 
-  // array of identified people matrices
-  // model of items in allCurrentPeople
+  // model of items in allCurrentPeople -- allCurrentPeople holds the current active users
   // {
   //   id: guid
-  //   activeUser: boolean
   //   timeActiveStart: date
   //   timeActiveEnd: date
+  //   facialConfidence: number
   //   facialRecMatrix: result from getFacialIdentification, used to match future images
   //   gender { result, confidence }
   //   age { result, confidence }
@@ -58,8 +57,12 @@ async function main(image) {
 
     if (facialRec.confidence > .7) {
       newPerson = false;
+
       currentPerson = allCurrentPeople[facialRec.index];
-      currentPerson.facialRecMatrix = facialRec.newFaceData;
+      if (facialRec.confidence > currentPerson.facialConfidence) {
+        currentPerson.facialRecMatrix = facialRec.newFaceData;
+        currentPerson.facialConfidence = facialRec.confidence;
+      }
 
       if (currentPerson.gender.confidence > .95) {
         needGender = false;
@@ -70,18 +73,22 @@ async function main(image) {
       }
     } else {
       currentPerson.id = uuid.v4();
+      currentPerson.facialConfidence = facialRec.confidence;
       currentPerson.facialRecMatrix = facialRec.newFaceData;
     }
 
+    // get age if needed
     if (needAge) {
       currentPerson.age = await getAge(jimpImage);
     }
 
+    // get gender if needed
     if (needGender) {
       currentPerson.gender = await getGender(jimpImage);
     }
 
-    if (newPerson) {
+    // only push if the person is over 18
+    if (newPerson && currentPerson.age.result != '0-8' && currentPerson.age.result != '8-18') {
       allCurrentPeople.push(currentPerson);
     }
   }
@@ -118,8 +125,13 @@ async function getAge(image) {
 
 process.on('SIGINT', async function() {
   // await csvWriter.writeRecords(allCurrentPeople);
-  console.log(allCurrentPeople);
-  console.log(allCurrentPeople.length);
+  // console.log(allCurrentPeople);
+  // console.log(allCurrentPeople.length);
+
+  // output current users
+  allCurrentPeople.forEach((person) => {
+    console.log(`Person::: id:${person.id}  Gender:${person.gender.result}  ${person.gender.confidence}  Age:${person.age.result}  ${person.age.confidence}  Facial Match:${person.facialConfidence}`)
+  });
   console.log("Caught interrupt signal");
   process.exit();
 });
@@ -139,27 +151,3 @@ let initialized = false;
 })();
 // httpServer.listen(3030);
 console.log("STARTED");
-
-
-
-
-
-
-const data = [
-  {
-    name: 'John',
-    surname: 'Snow',
-    age: 26,
-    gender: 'M'
-  }, {
-    name: 'Clair',
-    surname: 'White',
-    age: 33,
-    gender: 'F',
-  }, {
-    name: 'Fancy',
-    surname: 'Brown',
-    age: 78,
-    gender: 'F'
-  }
-];
