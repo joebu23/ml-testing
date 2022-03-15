@@ -20,18 +20,6 @@ let processing = false;
 
 var allCurrentPeople = [];
 
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-const csvWriter = createCsvWriter({
-  path: './outputs/people-out.csv',
-  header: [
-    {id: 'id', title: 'Id'},
-    {id: 'ageconfidence', title: 'Age'},
-    {id: 'ageresult', title: 'Age Label'},
-    {id: 'genderconfidence', title: 'Gender'},
-    {id: 'genderresult', title: 'Gender Label'},
-  ]
-});
-
 async function main(image) {
   processing = true;
 
@@ -53,64 +41,88 @@ async function main(image) {
   //   timeActiveEnd: date
   //   facialRecMatrix: result from getFacialIdentification, used to match future images
   //   gender { result, confidence }
-  //   genderconfidence
-  //   genderresult
-  //   ageconfidence
-  //   ageresult
   //   age { result, confidence }
   //   emotion? { result, confidence }
   // }
 
   let currentPerson = {};
-
-  // try to identify the face to see if it is a new or old user
-  var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
-  console.log(facialRec.confidence);
   
-  if (facialRec.identified) {
-    currentPerson = allCurrentPeople[facialRec.index];
-    currentPerson.facialRecMatrix = facialRec.newFaceData;
-  } else {
-    currentPerson.id = uuid.v4();
-    currentPerson.facialRecMatrix = facialRec.newFaceData;
-
-    var genderResult = await getInference(device,
-      jimpImage,
-      '/home/joe/Source/models/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml',
-      1,
-      ['Female', 'Male'],
-      2);
-
-    currentPerson.gender = { result: genderResult[0].label, confidence: genderResult[0].prob };
-    currentPerson.genderconfidence = genderResult[0].prob;
-    currentPerson.genderresult= genderResult[0].label;
-
-    var ageResult = await getInference(device,
-      jimpImage,
-      '/home/joe/Source/models/age_net/age_net.xml',
-      0,
-      ['0-8', '0-8', '8-18', '18-25', '25-35', '35-45', '45-55', 'Over 55'],
-      4);
-
-    currentPerson.age = { result: ageResult[0].label, confidence: ageResult[0].prob }
-    currentPerson.ageconfidence = ageResult[0].prob;
-    currentPerson.ageresult = ageResult[0].label;
+  // try to identify the face to see if it is a new or old user
+  // only identify active users
+  if (Math.abs(pose.yaw) < 20) {
+    let needAge = true;
+    let needGender = true;
+    let newPerson = true; 
     
-    allCurrentPeople.push(currentPerson);
+    var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
+
+    if (facialRec.confidence > .7) {
+      newPerson = false;
+      currentPerson = allCurrentPeople[facialRec.index];
+      currentPerson.facialRecMatrix = facialRec.newFaceData;
+
+      if (currentPerson.gender.confidence > .95) {
+        needGender = false;
+      }
+
+      if (currentPerson.age.confidence > .85) {
+        needAge = false;
+      }
+    } else {
+      currentPerson.id = uuid.v4();
+      currentPerson.facialRecMatrix = facialRec.newFaceData;
+    }
+
+    if (needAge) {
+      currentPerson.age = await getAge(jimpImage);
+    }
+
+    if (needGender) {
+      currentPerson.gender = await getGender(jimpImage);
+    }
+
+    if (newPerson) {
+      allCurrentPeople.push(currentPerson);
+    }
   }
   
-  jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
+  if (currentPerson.id) {
+    jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
+  }
 
   processing = false;
 };
 
+async function getGender(image) {
+  var gender = await getInference(device,
+    image,
+    '/home/joe/Source/models/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml',
+    1,
+    ['Female', 'Male'],
+    2);
+
+  return { result: gender[0].label, confidence: gender[0].prob };
+}
+
+async function getAge(image) {
+  var age = await getInference(device,
+    image,
+    '/home/joe/Source/models/age_net/age_net.xml',
+    0,
+    ['0-8', '0-8', '8-18', '18-25', '25-35', '35-45', '45-55', 'Over 55'],
+    4);
+
+  return { result: age[0].label, confidence: age[0].prob }
+}
+
+
 process.on('SIGINT', async function() {
-  await csvWriter.writeRecords(allCurrentPeople);
+  // await csvWriter.writeRecords(allCurrentPeople);
+  console.log(allCurrentPeople);
+  console.log(allCurrentPeople.length);
   console.log("Caught interrupt signal");
   process.exit();
 });
-
-
 
 socketPub.on('face', (data) => {
   if(data.image && !processing && initialized) {

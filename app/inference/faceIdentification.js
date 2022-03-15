@@ -45,7 +45,7 @@ async function identificationEngine(device_name, model) {
 }
 
 
-async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) {
+async function getFacialIdentification(img, poseRoll, srcLandmarks, currentPeople) {
 
   var results = [];
 
@@ -75,7 +75,7 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
 
   if (image.bitmap.height !== input_h_identity && image.bitmap.width !== input_w_identity) {
     image.contain(input_w_identity, input_h_identity);
-    image.rotate(pitch);
+    image.rotate(poseRoll);
   }
 
   let infer_req_identity;
@@ -102,9 +102,9 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
   const output_data_identity = new Float32Array(output_blob_identity.rmap());
 
   let returnResults = {
-    identified: false,
     confidence: 0,
-    image: image
+    index: -1,
+    newFaceData: undefined
   };
 
   results = Array.from(output_data_identity);
@@ -122,18 +122,10 @@ async function getFacialIdentification(img, pitch, srcLandmarks, currentPeople) 
       }
     }
 
-    if (matchValue > 0.7) {
-      returnResults.identified = true;
-      returnResults.confidence = matchValue;
-      returnResults.index = matchIndex;
-      returnResults.newFaceData = results;
-    } else {
-      returnResults.identified = false;
-      returnResults.confidence = matchValue;
-      returnResults.newFaceData = results;
-    }
+    returnResults.confidence = matchValue;
+    returnResults.index = matchIndex;
+    returnResults.newFaceData = results;
   } else {
-    returnResults.identified = false;
     returnResults.newFaceData = results;
   }
 
