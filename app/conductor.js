@@ -48,47 +48,63 @@ async function main(image) {
   
   // try to identify the face to see if it is a new or old user
   // only identify active users
-  if (Math.abs(pose.yaw) < 20) {
+  if (Math.abs(pose.yaw) < 30) {
     let needAge = true;
     let needGender = true;
     let newPerson = true; 
     
     var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
 
-    if (facialRec.confidence > .7) {
+    if (facialRec.confidence > .65) {
       newPerson = false;
 
       currentPerson = allCurrentPeople[facialRec.index];
-      if (facialRec.confidence > currentPerson.facialConfidence) {
-        currentPerson.facialRecMatrix = facialRec.newFaceData;
-        currentPerson.facialConfidence = facialRec.confidence;
-      }
+      currentPerson.faceMatches.push(facialRec.confidence);
+      // if (facialRec.confidence > currentPerson.facialConfidence) {
+      //   currentPerson.facialRecMatrix = facialRec.newFaceData;
+      //   currentPerson.facialConfidence = facialRec.confidence;
+      // }
 
-      if (currentPerson.gender.confidence > .95) {
-        needGender = false;
-      }
+      currentPerson.lastObservedTime = new Date();
 
-      if (currentPerson.age.confidence > .85) {
+      // if (currentPerson.gender.confidence > .95) {
+      //   needGender = false;
+      // }
+
+      if (currentPerson.age.confidence > .70 || currentPerson.age.result != '0-8') {
         needAge = false;
       }
     } else {
       currentPerson.id = uuid.v4();
+      currentPerson.firstObservedTime = new Date();
       currentPerson.facialConfidence = facialRec.confidence;
       currentPerson.facialRecMatrix = facialRec.newFaceData;
+      currentPerson.faceMatches = [];
+      currentPerson.genders = [];
+      currentPerson.ages = [];
     }
 
     // get age if needed
     if (needAge) {
-      currentPerson.age = await getAge(jimpImage);
+      var newAge = await getAge(jimpImage);
+      currentPerson.age = newAge;
+      currentPerson.ages.push(newAge);
     }
 
     // get gender if needed
     if (needGender) {
-      currentPerson.gender = await getGender(jimpImage);
+      var newGender = await getGender(jimpImage);
+
+      if (currentPerson.gender?.result != newGender.result) {
+        currentPerson.gender = newGender;
+      }
+
+      currentPerson.gender = newGender;
+      currentPerson.genders.push(newGender);
     }
 
     // only push if the person is over 18
-    if (newPerson && currentPerson.age.result != '0-8' && currentPerson.age.result != '8-18') {
+    if (newPerson) {
       allCurrentPeople.push(currentPerson);
     }
   }
@@ -130,7 +146,23 @@ process.on('SIGINT', async function() {
 
   // output current users
   allCurrentPeople.forEach((person) => {
-    console.log(`Person::: id:${person.id}  Gender:${person.gender.result}  ${person.gender.confidence}  Age:${person.age.result}  ${person.age.confidence}  Facial Match:${person.facialConfidence}`)
+    console.log('**********************************');
+    console.log(`Person::: id: ${person.id}`);
+    console.log(`Gender: ${person.gender.result}  ${person.gender.confidence}`);
+    console.log('Genders:');
+
+    var males = person.genders.filter(x => x.result === 'Male');
+    var females = person.genders.filter(x => x.result === 'Female');
+
+    console.log(`Males: ${males.length} Female: ${females.length}`);
+    console.log(`Age: ${person.age.result}  ${person.age.confidence}`);
+
+    console.log(`Facial Match: ${person.facialConfidence}`);
+    console.log('Facial Matches');
+    console.log(person.faceMatches);
+    console.log(`First Time: ${person.firstObservedTime}`);
+    console.log(`Last Time: ${person.lastObservedTime}`);
+    console.log('**********************************');
   });
   console.log("Caught interrupt signal");
   process.exit();
