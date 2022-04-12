@@ -91,6 +91,9 @@ async function getInference(device, image, model, output, labels, top) {
 
     const output_blob = infer_req.getBlob(output_info.name());
     const output_data = new Float32Array(output_blob.rmap());
+
+    // console.log(output_data);
+
     const results =
     postProcessing.topClassificationResults(output_data, labels, top_k);
     output_blob.unmap();

@@ -17,7 +17,7 @@ const socketPub = require('socket.io-client')('ws://' + host + ':' + sport);
 // }
 
 
-var camera = new cv.VideoCapture(2);
+var camera = new cv.VideoCapture(0);
 
 var ieInterval;
 

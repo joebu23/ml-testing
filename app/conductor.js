@@ -3,7 +3,7 @@
 
 const jimp = require('jimp');
 const uuid = require('uuid');
-const fs = require('fs');
+// const fs = require('fs');
 
 const { detectPose, poseDetectorEngine } = require('./inference/poseDetector.js');
 const { getFacialLandmarks, facialLandmarksEngine } = require('./inference/faceLandmarks.js');
@@ -48,8 +48,8 @@ async function main(image) {
   
   // try to identify the face to see if it is a new or old user
   // only identify active users
-  if (Math.abs(pose.yaw) < 30) {
-    let needAge = true;
+  if (Math.abs(pose.yaw) < 20) {
+    // let needAge = true;
     let needGender = true;
     let newPerson = true; 
     
@@ -60,6 +60,26 @@ async function main(image) {
 
       currentPerson = allCurrentPeople[facialRec.index];
       currentPerson.faceMatches.push(facialRec.confidence);
+
+      if (Math.abs(pose.yaw) < Math.abs(currentPerson.bestYaw)) {
+        console.log('better yaw found');
+        console.log(pose.yaw);
+
+        currentPerson.bestYaw = pose.yaw;
+        currentPerson.facialRecMatrix = facialRec.newFaceData;
+        currentPerson.facialConfidence = facialRec.confidence;
+      }
+      
+      // if (Math.abs(pose.roll) < Math.abs(currentPerson.bestRoll)) {
+      //   console.log('better roll found');
+      // }
+
+      // currentPerson.bestYaw = pose.yaw;
+      // currentPerson.bestRoll = pose.roll;
+      // currentPerson.bestPitch = pose.pitch;
+
+      // if the new face pose is better then save that image instead
+      // if (pose.)
       // if (facialRec.confidence > currentPerson.facialConfidence) {
       //   currentPerson.facialRecMatrix = facialRec.newFaceData;
       //   currentPerson.facialConfidence = facialRec.confidence;
@@ -67,35 +87,43 @@ async function main(image) {
 
       currentPerson.lastObservedTime = new Date();
 
-      // if (currentPerson.gender.confidence > .95) {
-      //   needGender = false;
-      // }
-
-      if (currentPerson.age.confidence > .70 || currentPerson.age.result != '0-8') {
-        needAge = false;
+      if (currentPerson.gender.confidence > .98) {
+        needGender = false;
       }
+
+      // if (currentPerson.age.confidence > .70 || currentPerson.age.result != '0-8') {
+      //   needAge = false;
+      // }
     } else {
       currentPerson.id = uuid.v4();
       currentPerson.firstObservedTime = new Date();
+      currentPerson.firstMatchConfidence = facialRec.confidence;
       currentPerson.facialConfidence = facialRec.confidence;
       currentPerson.facialRecMatrix = facialRec.newFaceData;
       currentPerson.faceMatches = [];
       currentPerson.genders = [];
       currentPerson.ages = [];
+
+      // console.log(pose.yaw);
+      currentPerson.bestYaw = pose.yaw;
+      currentPerson.bestRoll = pose.roll;
+      currentPerson.bestPitch = pose.pitch;
     }
 
     // get age if needed
-    if (needAge) {
-      var newAge = await getAge(jimpImage);
-      currentPerson.age = newAge;
-      currentPerson.ages.push(newAge);
-    }
+    // if (needAge) {
+    var newAge = await getAge(jimpImage);
+      // currentPerson.age = newAge;
+    currentPerson.ages.push(newAge);
+
+    currentPerson.testAge = await getAge2(jimpImage);
+    // }
 
     // get gender if needed
     if (needGender) {
       var newGender = await getGender(jimpImage);
 
-      if (currentPerson.gender?.result != newGender.result) {
+      if (currentPerson.gender?.result != newGender.result && newGender.confidence > currentPerson.gender?.confidence) {
         currentPerson.gender = newGender;
       }
 
@@ -130,39 +158,55 @@ async function getGender(image) {
 async function getAge(image) {
   var age = await getInference(device,
     image,
+    '/home/joe/Source/models/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml',
+    0,
+    [],
+    1);
+
+  return parseFloat(age[0].prob); // { result: age[0].label, confidence: age[0].prob }
+}
+
+async function getAge2(image) {
+  var age = await getInference(device,
+    image,
     '/home/joe/Source/models/age_net/age_net.xml',
     0,
     ['0-8', '0-8', '8-18', '18-25', '25-35', '35-45', '45-55', 'Over 55'],
     4);
 
-  return { result: age[0].label, confidence: age[0].prob }
+    return { result: age[0].label, confidence: age[0].prob }
 }
 
-
 process.on('SIGINT', async function() {
-  // await csvWriter.writeRecords(allCurrentPeople);
-  // console.log(allCurrentPeople);
-  // console.log(allCurrentPeople.length);
-
   // output current users
   allCurrentPeople.forEach((person) => {
-    console.log('**********************************');
-    console.log(`Person::: id: ${person.id}`);
-    console.log(`Gender: ${person.gender.result}  ${person.gender.confidence}`);
-    console.log('Genders:');
+    // we can add filtering to this before the output
+    // e.g. - if the person was only seen once and the number of facial matches is less than 10 or something
+    if (person.faceMatches.length >= 5) {
+      console.log('**********************************');
+      console.log(`Person::: id: ${person.id}`);
+      console.log(`Gender: ${person.gender.result}  ${person.gender.confidence}`);
+      console.log('Genders:');
+      
+      var males = person.genders.filter(x => x.result === 'Male');
+      var females = person.genders.filter(x => x.result === 'Female');
+      
+      console.log(`Males: ${males.length} Female: ${females.length}`);
+      // console.log(`Age: ${person.age.result}  ${person.age.confidence}`);
+      console.log('Age:');
+      console.log(person.ages);
+      console.log(((person.ages.reduce((a, b) => a + b) / person.ages.length) * 100).toFixed(2));
 
-    var males = person.genders.filter(x => x.result === 'Male');
-    var females = person.genders.filter(x => x.result === 'Female');
+      console.log(`Other Age: ${person.testAge.result} - ${person.testAge.confidence}`);
 
-    console.log(`Males: ${males.length} Female: ${females.length}`);
-    console.log(`Age: ${person.age.result}  ${person.age.confidence}`);
-
-    console.log(`Facial Match: ${person.facialConfidence}`);
-    console.log('Facial Matches');
-    console.log(person.faceMatches);
-    console.log(`First Time: ${person.firstObservedTime}`);
-    console.log(`Last Time: ${person.lastObservedTime}`);
-    console.log('**********************************');
+      console.log(`First Facial Match: ${person.firstMatchConfidence}`);
+      console.log('Facial Matches');
+      console.log(person.faceMatches.length);
+      console.log(`First Time: ${person.firstObservedTime}`);
+      console.log(`Last Time: ${person.lastObservedTime}`);
+      console.log(`Total Interaction Time: ${(person.lastObservedTime.getTime() - person.firstObservedTime.getTime()) / 1000} seconds`);
+      console.log('**********************************');
+    }
   });
   console.log("Caught interrupt signal");
   process.exit();
