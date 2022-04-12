@@ -55,7 +55,7 @@ async function main(image) {
     
     var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
 
-    if (facialRec.confidence > .65) {
+    if (facialRec.confidence > .635) {
       newPerson = false;
 
       currentPerson = allCurrentPeople[facialRec.index];
