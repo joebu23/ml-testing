@@ -55,45 +55,24 @@ async function main(image) {
     
     var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
 
-    if (facialRec.confidence > .635) {
+    if (facialRec.confidence > .63) {
       newPerson = false;
 
       currentPerson = allCurrentPeople[facialRec.index];
       currentPerson.faceMatches.push(facialRec.confidence);
 
+      // check to see if the new image is better for comparison, notably that he yaw is closer to zero (straight ahead)
       if (Math.abs(pose.yaw) < Math.abs(currentPerson.bestYaw)) {
-        console.log('better yaw found');
-        console.log(pose.yaw);
-
         currentPerson.bestYaw = pose.yaw;
         currentPerson.facialRecMatrix = facialRec.newFaceData;
         currentPerson.facialConfidence = facialRec.confidence;
       }
       
-      // if (Math.abs(pose.roll) < Math.abs(currentPerson.bestRoll)) {
-      //   console.log('better roll found');
-      // }
-
-      // currentPerson.bestYaw = pose.yaw;
-      // currentPerson.bestRoll = pose.roll;
-      // currentPerson.bestPitch = pose.pitch;
-
-      // if the new face pose is better then save that image instead
-      // if (pose.)
-      // if (facialRec.confidence > currentPerson.facialConfidence) {
-      //   currentPerson.facialRecMatrix = facialRec.newFaceData;
-      //   currentPerson.facialConfidence = facialRec.confidence;
-      // }
-
       currentPerson.lastObservedTime = new Date();
 
       if (currentPerson.gender.confidence > .98) {
         needGender = false;
       }
-
-      // if (currentPerson.age.confidence > .70 || currentPerson.age.result != '0-8') {
-      //   needAge = false;
-      // }
     } else {
       currentPerson.id = uuid.v4();
       currentPerson.firstObservedTime = new Date();
@@ -180,9 +159,22 @@ async function getAge2(image) {
 process.on('SIGINT', async function() {
   // output current users
   allCurrentPeople.forEach((person) => {
-    // we can add filtering to this before the output
+    // we add filtering to this before the output
     // e.g. - if the person was only seen once and the number of facial matches is less than 10 or something
-    if (person.faceMatches.length >= 5) {
+    // filter based on data (face matches per minute needs to be over 2 and face match confidence needs to be less than .63)
+    
+    var minutesPersonInView = 0;
+    // dividing to figure out the matches per minute.  If they have an undefined value in the lastObservedTime we need to catch that
+    try {
+      minutesPersonInView = (((person.lastObservedTime.getTime() - person.firstObservedTime.getTime()) / 1000) / 60).toFixed(4);
+    } catch (err) {
+      minutesPersonInView = 2;
+    }
+
+    var personFpm = Math.floor(person.faceMatches.length / minutesPersonInView);
+    console.log(personFpm);
+
+    if (personFpm > 2) {
       console.log('**********************************');
       console.log(`Person::: id: ${person.id}`);
       console.log(`Gender: ${person.gender.result}  ${person.gender.confidence}`);
@@ -190,9 +182,8 @@ process.on('SIGINT', async function() {
       
       var males = person.genders.filter(x => x.result === 'Male');
       var females = person.genders.filter(x => x.result === 'Female');
-      
       console.log(`Males: ${males.length} Female: ${females.length}`);
-      // console.log(`Age: ${person.age.result}  ${person.age.confidence}`);
+      
       console.log('Age:');
       console.log(person.ages);
       console.log(((person.ages.reduce((a, b) => a + b) / person.ages.length) * 100).toFixed(2));
@@ -200,11 +191,10 @@ process.on('SIGINT', async function() {
       console.log(`Other Age: ${person.testAge.result} - ${person.testAge.confidence}`);
 
       console.log(`First Facial Match: ${person.firstMatchConfidence}`);
-      console.log('Facial Matches');
-      console.log(person.faceMatches.length);
+      console.log(`Facial Matches: ${person.faceMatches.length}`);
       console.log(`First Time: ${person.firstObservedTime}`);
       console.log(`Last Time: ${person.lastObservedTime}`);
-      console.log(`Total Interaction Time: ${(person.lastObservedTime.getTime() - person.firstObservedTime.getTime()) / 1000} seconds`);
+      console.log(`Total Interaction Time: ${minutesPersonInView} minutes`);
       console.log('**********************************');
     }
   });
