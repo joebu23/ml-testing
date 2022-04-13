@@ -183,7 +183,7 @@ function logArray(peopleList) {
 
     var personFpm = (person.faceMatches.length / minutesPersonInView).toFixed(4);
 
-    if (personFpm > 2) {
+    if (personFpm > 1.5) {
       console.log('**********************************');
       console.log(`Person::: id: ${person.id}`);
       console.log(`Gender: ${person.gender.result}  ${person.gender.confidence}`);
