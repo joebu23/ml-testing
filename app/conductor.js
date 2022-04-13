@@ -19,6 +19,8 @@ const device = "CPU";
 let processing = false;
 
 var allCurrentPeople = [];
+var allPeople = [];
+var lastInactiveFlush = new Date();
 
 async function main(image) {
   processing = true;
@@ -70,7 +72,7 @@ async function main(image) {
       
       currentPerson.lastObservedTime = new Date();
 
-      if (currentPerson.gender.confidence > .98) {
+      if (currentPerson.gender?.confidence > .98) {
         needGender = false;
       }
     } else {
@@ -83,34 +85,31 @@ async function main(image) {
       currentPerson.genders = [];
       currentPerson.ages = [];
 
-      // console.log(pose.yaw);
       currentPerson.bestYaw = pose.yaw;
       currentPerson.bestRoll = pose.roll;
       currentPerson.bestPitch = pose.pitch;
     }
 
-    // get age if needed
-    // if (needAge) {
+    // get age
     var newAge = await getAge(jimpImage);
-      // currentPerson.age = newAge;
     currentPerson.ages.push(newAge);
 
-    currentPerson.testAge = await getAge2(jimpImage);
-    // }
+    var newAgeRange = await getAge2(jimpImage);
+    if (newAgeRange.confidence > currentPerson.testAge?.confidence || !currentPerson.testAge) {
+      currentPerson.testAge = newAgeRange;
+    }
 
     // get gender if needed
     if (needGender) {
       var newGender = await getGender(jimpImage);
 
-      if (currentPerson.gender?.result != newGender.result && newGender.confidence > currentPerson.gender?.confidence) {
+      if (newGender.confidence > currentPerson.gender?.confidence || !currentPerson.gender) {
         currentPerson.gender = newGender;
       }
 
-      currentPerson.gender = newGender;
       currentPerson.genders.push(newGender);
     }
 
-    // only push if the person is over 18
     if (newPerson) {
       allCurrentPeople.push(currentPerson);
     }
@@ -118,6 +117,18 @@ async function main(image) {
   
   if (currentPerson.id) {
     jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
+  }
+
+  // filter people into 'active' and 'all' sets
+  var currentTime = new Date();
+  var inactivePeople = allCurrentPeople.filter(acp => ((currentTime.getTime() - acp.lastObservedTime?.getTime()) / 1000) / 60 > 2);
+  allPeople.concat(inactivePeople);
+
+  allCurrentPeople = allCurrentPeople.filter(acp => (((currentTime.getTime() - acp.lastObservedTime?.getTime()) / 1000) / 60 <= 2) || (!acp.lastObservedTime && (((currentTime.getTime() - acp.firstObservedTime?.getTime()) / 1000) / 60 < 2)));
+
+  if (((currentTime.getTime() - lastInactiveFlush.getTime()) / 1000) / 60 > 10) {
+    console.log(`There are ${allPeople.length} inactive people in memory`);
+    reportInactivePeople();
   }
 
   processing = false;
@@ -156,9 +167,8 @@ async function getAge2(image) {
     return { result: age[0].label, confidence: age[0].prob }
 }
 
-process.on('SIGINT', async function() {
-  // output current users
-  allCurrentPeople.forEach((person) => {
+function logArray(peopleList) {
+  peopleList.forEach((person) => {
     // we add filtering to this before the output
     // e.g. - if the person was only seen once and the number of facial matches is less than 10 or something
     // filter based on data (face matches per minute needs to be over 2 and face match confidence needs to be less than .63)
@@ -168,11 +178,10 @@ process.on('SIGINT', async function() {
     try {
       minutesPersonInView = (((person.lastObservedTime.getTime() - person.firstObservedTime.getTime()) / 1000) / 60).toFixed(4);
     } catch (err) {
-      minutesPersonInView = 2;
+      minutesPersonInView = 0;
     }
 
     var personFpm = (person.faceMatches.length / minutesPersonInView).toFixed(4);
-    console.log(personFpm);
 
     if (personFpm > 2) {
       console.log('**********************************');
@@ -184,9 +193,7 @@ process.on('SIGINT', async function() {
       var females = person.genders.filter(x => x.result === 'Female');
       console.log(`Males: ${males.length} Female: ${females.length}`);
       
-      console.log('Age:');
-      console.log(person.ages);
-      console.log(((person.ages.reduce((a, b) => a + b) / person.ages.length) * 100).toFixed(2));
+      console.log(`Age (via average): ${((person.ages.reduce((a, b) => a + b) / person.ages.length) * 100).toFixed(2)}`);
 
       console.log(`Other Age: ${person.testAge.result} - ${person.testAge.confidence}`);
 
@@ -198,6 +205,17 @@ process.on('SIGINT', async function() {
       console.log('**********************************');
     }
   });
+}
+
+async function reportInactivePeople() {
+  logArray(allPeople);
+  allPeople = [];
+}
+
+process.on('SIGINT', async function() {
+  console.log(`There were ${allCurrentPeople.length} marked as current users when shutdown signal received`);
+  // output curent users
+  logArray(allCurrentPeople);
   console.log("Caught interrupt signal");
   process.exit();
 });
