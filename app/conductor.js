@@ -171,7 +171,7 @@ process.on('SIGINT', async function() {
       minutesPersonInView = 2;
     }
 
-    var personFpm = Math.floor(person.faceMatches.length / minutesPersonInView);
+    var personFpm = (person.faceMatches.length / minutesPersonInView).toFixed(4);
     console.log(personFpm);
 
     if (personFpm > 2) {
