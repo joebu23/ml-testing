@@ -9,6 +9,7 @@ const { detectPose, poseDetectorEngine } = require('./inference/poseDetector.js'
 const { getFacialLandmarks, facialLandmarksEngine } = require('./inference/faceLandmarks.js');
 const { getFacialIdentification, identificationEngine } = require('./inference/faceIdentification.js');
 const { getInference } = require('./inference/genericInference.js');
+const { logArray, findTimeDifferenceInMinutes, findTimeDifferenceInMs } = require('./common/index.js');
 
 const host = '127.0.0.1'; // process.env.SOCKET_ADDR || '172.17.0.1';
 const sport = process.env.SOCKET_PORT || '3333';
@@ -18,118 +19,105 @@ const device = "CPU";
 
 let processing = false;
 
-var allCurrentPeople = [];
-var allPeople = [];
-var lastInactiveFlush = new Date();
+var currentPeople = [];
+var oldPeople = [];
 
 async function main(image) {
   processing = true;
+  var currentDate = new Date();
+  var needGender = true;
+  var needAge = true;
 
   var jimpImage = await jimp.read(image.img.bitmap).then((img) => {
     return img;
   });
  
-  // is this user active or passive?
-  // using just yaw right now.  Basically if the face is from -20 to 20 degrees it is in the direction of the camera and is therefore active
   var pose = await detectPose(jimpImage);
   var landmarks = await getFacialLandmarks(jimpImage);
-
-  // model of items in allCurrentPeople -- allCurrentPeople holds the current active users
-  // {
-  //   id: guid
-  //   timeActiveStart: date
-  //   timeActiveEnd: date
-  //   facialConfidence: number
-  //   facialRecMatrix: result from getFacialIdentification, used to match future images
-  //   gender { result, confidence }
-  //   age { result, confidence }
-  //   emotion? { result, confidence }
-  // }
 
   let currentPerson = {};
   
   // try to identify the face to see if it is a new or old user
   // only identify active users
-  if (Math.abs(pose.yaw) < 20) {
-    // let needAge = true;
-    let needGender = true;
-    let newPerson = true; 
+  var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, currentPeople);
+
+  console.clear();
+  console.log(facialRec.confidence);
+
+  var facialTimeDiff = findTimeDifferenceInMs(currentPeople[facialRec.index]?.lastObservedTime, currentDate);
+  if (facialRec.confidence > 0.8 || (facialRec.confidence > 0.7 && facialTimeDiff && facialTimeDiff < 2500)) {
+  // if (facialRec.confidence > .8 || facialRec.confidence > .7 && findTimeDifferenceInMs(currentPeople[facialRec.index].lastObservedTime, currentDate) < 2500) {
+    console.log(findTimeDifferenceInMs(currentPeople[facialRec.index].lastObservedTime, currentDate));
+    currentPerson = currentPeople[facialRec.index];
+    currentPerson.faceMatches.push(facialRec.confidence);
+    currentPerson.lastObservedTime = currentDate;
     
-    var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, allCurrentPeople);
-
-    if (facialRec.confidence > .63) {
-      newPerson = false;
-
-      currentPerson = allCurrentPeople[facialRec.index];
-      currentPerson.faceMatches.push(facialRec.confidence);
-
-      // check to see if the new image is better for comparison, notably that he yaw is closer to zero (straight ahead)
-      if (Math.abs(pose.yaw) < Math.abs(currentPerson.bestYaw)) {
-        currentPerson.bestYaw = pose.yaw;
-        currentPerson.facialRecMatrix = facialRec.newFaceData;
-        currentPerson.facialConfidence = facialRec.confidence;
-      }
-      
-      currentPerson.lastObservedTime = new Date();
-
-      if (currentPerson.gender?.confidence > .98) {
-        needGender = false;
-      }
-    } else {
-      currentPerson.id = uuid.v4();
-      currentPerson.firstObservedTime = new Date();
-      currentPerson.firstMatchConfidence = facialRec.confidence;
-      currentPerson.facialConfidence = facialRec.confidence;
-      currentPerson.facialRecMatrix = facialRec.newFaceData;
-      currentPerson.faceMatches = [];
-      currentPerson.genders = [];
-      currentPerson.ages = [];
-
+    // check to see if the new image is better for comparison, notably that he yaw is closer to zero (straight ahead)
+    if (Math.abs(pose.yaw) < Math.abs(currentPerson.bestYaw)) {
       currentPerson.bestYaw = pose.yaw;
-      currentPerson.bestRoll = pose.roll;
-      currentPerson.bestPitch = pose.pitch;
+      
+      currentPerson.facialRecMatrix = facialRec.newFaceData;
+      currentPerson.facialConfidence = facialRec.confidence;
+      jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
     }
 
-    // get age
-    var newAge = await getAge(jimpImage);
-    currentPerson.ages.push(newAge);
-
-    var newAgeRange = await getAge2(jimpImage);
-    if (newAgeRange.confidence > currentPerson.testAge?.confidence || !currentPerson.testAge) {
-      currentPerson.testAge = newAgeRange;
+    if (currentPerson.gender?.confidence > .985) {
+      needGender = false;
     }
 
-    // get gender if needed
-    if (needGender) {
-      var newGender = await getGender(jimpImage);
-
-      if (newGender.confidence > currentPerson.gender?.confidence || !currentPerson.gender) {
-        currentPerson.gender = newGender;
-      }
-
-      currentPerson.genders.push(newGender);
+    if (currentPerson.foundAgeRange?.confidence > .90) {
+      needAge = false;
     }
+  } else {
+    currentPerson.id = uuid.v4();
+    currentPerson.firstObservedTime = currentDate;
+    currentPerson.lastObservedTime = currentDate;
+    currentPerson.firstMatchConfidence = facialRec.confidence;
+    currentPerson.facialConfidence = facialRec.confidence;
+    currentPerson.facialRecMatrix = facialRec.newFaceData;
+    currentPerson.faceMatches = [];
+    currentPerson.genders = [];
+    currentPerson.ages = [];
 
-    if (newPerson) {
-      allCurrentPeople.push(currentPerson);
+    currentPerson.bestYaw = pose.yaw;
+    currentPerson.bestRoll = pose.roll;
+    currentPerson.bestPitch = pose.pitch;
+    
+    jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
+    currentPeople.push(currentPerson);
+  }
+
+  var newGender = await getGender(jimpImage);
+  currentPerson.genders.push(newGender);
+
+  if (needGender) {
+    if (newGender.confidence > currentPerson.gender?.confidence || !currentPerson.gender) {
+      currentPerson.gender = newGender;
     }
   }
   
-  if (currentPerson.id) {
-    jimpImage.write(`./outputs/identity-${currentPerson.id}.jpg`);
+  currentPerson.ages.push(await getAge(jimpImage));
+  if (needAge) {
+    var newAgeRange = await getAge2(jimpImage);
+
+    if (newAgeRange.confidence > currentPerson.foundAgeRange?.confidence || !currentPerson.foundAgeRange) {
+      currentPerson.foundAgeRange = newAgeRange;
+    }
   }
 
-  // filter people into 'active' and 'all' sets
-  var currentTime = new Date();
-  var inactivePeople = allCurrentPeople.filter(acp => ((currentTime.getTime() - acp.lastObservedTime?.getTime()) / 1000) / 60 > 2);
-  allPeople.concat(inactivePeople);
+  var tempActive = [];
+  currentPeople.forEach((cp) => {
+    if ((findTimeDifferenceInMinutes(cp.lastObservedTime, currentDate) > 1) ||
+        (!cp.lastObservedTime && findTimeDifferenceInMinutes(cp.firstObservedTime, currentDate) > 1)) {
+          oldPeople.push(cp);
+    } else {
+      tempActive.push(cp);
+    }
+  });
 
-  allCurrentPeople = allCurrentPeople.filter(acp => (((currentTime.getTime() - acp.lastObservedTime?.getTime()) / 1000) / 60 <= 2) || (!acp.lastObservedTime && (((currentTime.getTime() - acp.firstObservedTime?.getTime()) / 1000) / 60 < 2)));
+  currentPeople = tempActive;
 
-  if (((currentTime.getTime() - lastInactiveFlush.getTime()) / 1000) / 60 > 10) {
-    console.log(`There are ${allPeople.length} inactive people in memory`);
-    reportInactivePeople();
-  }
+  console.log(`Active: ${currentPeople.length} -- Inactive: ${oldPeople.length}`);
 
   processing = false;
 };
@@ -167,55 +155,17 @@ async function getAge2(image) {
     return { result: age[0].label, confidence: age[0].prob }
 }
 
-function logArray(peopleList) {
-  peopleList.forEach((person) => {
-    // we add filtering to this before the output
-    // e.g. - if the person was only seen once and the number of facial matches is less than 10 or something
-    // filter based on data (face matches per minute needs to be over 2 and face match confidence needs to be less than .63)
-    
-    var minutesPersonInView = 0;
-    // dividing to figure out the matches per minute.  If they have an undefined value in the lastObservedTime we need to catch that
-    try {
-      minutesPersonInView = (((person.lastObservedTime.getTime() - person.firstObservedTime.getTime()) / 1000) / 60).toFixed(4);
-    } catch (err) {
-      minutesPersonInView = 0;
-    }
-
-    var personFpm = (person.faceMatches.length / minutesPersonInView).toFixed(4);
-
-    if (personFpm > 1.5) {
-      console.log('**********************************');
-      console.log(`Person::: id: ${person.id}`);
-      console.log(`Gender: ${person.gender.result}  ${person.gender.confidence}`);
-      console.log('Genders:');
-      
-      var males = person.genders.filter(x => x.result === 'Male');
-      var females = person.genders.filter(x => x.result === 'Female');
-      console.log(`Males: ${males.length} Female: ${females.length}`);
-      
-      console.log(`Age (via average): ${((person.ages.reduce((a, b) => a + b) / person.ages.length) * 100).toFixed(2)}`);
-
-      console.log(`Other Age: ${person.testAge.result} - ${person.testAge.confidence}`);
-
-      console.log(`First Facial Match: ${person.firstMatchConfidence}`);
-      console.log(`Facial Matches: ${person.faceMatches.length}`);
-      console.log(`First Time: ${person.firstObservedTime}`);
-      console.log(`Last Time: ${person.lastObservedTime}`);
-      console.log(`Total Interaction Time: ${minutesPersonInView} minutes`);
-      console.log('**********************************');
-    }
-  });
-}
-
-async function reportInactivePeople() {
-  logArray(allPeople);
-  allPeople = [];
+function reportInactivePeople() {
+  logArray(oldPeople);
 }
 
 process.on('SIGINT', async function() {
-  console.log(`There were ${allCurrentPeople.length} marked as current users when shutdown signal received`);
+  console.log(`There were ${currentPeople.length} marked as current users when shutdown signal received`);
   // output curent users
-  logArray(allCurrentPeople);
+  logArray(currentPeople);
+  console.log('Inactive Users')
+  console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
+  reportInactivePeople();
   console.log("Caught interrupt signal");
   process.exit();
 });

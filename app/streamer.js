@@ -30,7 +30,7 @@ socketPub.on('connect', () => {
       let frame = camera.read();
       let buffer = cv.imencode('.jpg',frame).toString('base64');
       socketPub.emit('rawImage', { image: true, buffer: buffer });
-    }, 1000);
+    }, 250);
   } catch (e){
     console.log("Couldn't start camera:", e)
   }
