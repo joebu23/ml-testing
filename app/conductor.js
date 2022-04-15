@@ -23,6 +23,8 @@ var currentPeople = [];
 var oldPeople = [];
 
 async function main(image) {
+  var performanceDateStart = new Date();
+
   processing = true;
   var currentDate = new Date();
   var needGender = true;
@@ -41,13 +43,13 @@ async function main(image) {
   // only identify active users
   var facialRec = await getFacialIdentification(jimpImage, pose.roll, landmarks, currentPeople);
 
-  console.clear();
-  console.log(facialRec.confidence);
+  // console.clear();
+  // console.log(facialRec.confidence);
 
   var facialTimeDiff = findTimeDifferenceInMs(currentPeople[facialRec.index]?.lastObservedTime, currentDate);
-  if (facialRec.confidence > 0.8 || (facialRec.confidence > 0.7 && facialTimeDiff && facialTimeDiff < 2500)) {
+  if (facialRec.confidence > 0.8 || (facialRec.confidence > 0.7 && facialTimeDiff && facialTimeDiff < 5000)) {
   // if (facialRec.confidence > .8 || facialRec.confidence > .7 && findTimeDifferenceInMs(currentPeople[facialRec.index].lastObservedTime, currentDate) < 2500) {
-    console.log(findTimeDifferenceInMs(currentPeople[facialRec.index].lastObservedTime, currentDate));
+    // console.log(findTimeDifferenceInMs(currentPeople[facialRec.index].lastObservedTime, currentDate));
     currentPerson = currentPeople[facialRec.index];
     currentPerson.faceMatches.push(facialRec.confidence);
     currentPerson.lastObservedTime = currentDate;
@@ -117,9 +119,13 @@ async function main(image) {
 
   currentPeople = tempActive;
 
-  console.log(`Active: ${currentPeople.length} -- Inactive: ${oldPeople.length}`);
+  // console.log(`Active: ${currentPeople.length} -- Inactive: ${oldPeople.length}`);
 
   processing = false;
+
+  // console.clear();
+  console.log(findTimeDifferenceInMs(performanceDateStart, new Date()));
+  // console.log(pose);
 };
 
 async function getGender(image) {

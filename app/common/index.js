@@ -61,7 +61,7 @@ function logArray(peopleList) {
     // if (personFpm > 1.5) {
     console.log('**********************************');
     console.log(`Person::: id: ${person.id}`);
-    console.log(`Gender: ${person.gender.result}  ${person.gender.confidence}`);
+    console.log(`Gender: ${person.gender?.result}  ${person.gender?.confidence}`);
     console.log('Genders:');
     
     var males = person.genders.filter(x => x.result === 'Male');
@@ -70,7 +70,7 @@ function logArray(peopleList) {
     
     console.log(`Age (via average): ${((person.ages.reduce((a, b) => a + b) / person.ages.length) * 100).toFixed(2)}`);
 
-    console.log(`Age Range: ${person.foundAgeRange.result} - ${person.foundAgeRange.confidence}`);
+    console.log(`Age Range: ${person.foundAgeRange?.result} - ${person.foundAgeRange?.confidence}`);
 
     console.log(`First Facial Match: ${person.firstMatchConfidence}`);
     console.log(`Facial Matches: ${person.faceMatches.length}`);

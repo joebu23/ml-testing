@@ -17,7 +17,7 @@ const {
 async function getInference(device, image, model, output, labels, top) {
     const core = new Core();
 
-
+    // console.log(showAvailableDevices(core));
     const model_path = model;
     const bin_path = binPathFromXML(model_path);
     // const labels_path = labelsPathFromXML(model_path);
